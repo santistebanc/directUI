@@ -1,10 +1,16 @@
 import { Box } from "./Box";
+import { State } from "./direct";
 import { mountToDOM } from "./dom";
 import { Text } from "./Text";
+import opentype from "opentype.js";
 
-const title = Text(({ page }) => "hello world " + page());
+const font = State(null);
 
-const content = Text("this is the content of the page");
+opentype.load("fonts/OpenSans-Regular.ttf").then((res) => font.set(res));
+
+const title = Text(({ page }) => "hello world " + page(), { font });
+
+const content = Text("this is the content of the page", { font });
 
 const container = Box(({ page }) =>
   page() % 2 === 1 ? [content] : [title({ page }), content]

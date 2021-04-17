@@ -14,17 +14,18 @@ export const defaultProps = {
   font: null,
 };
 
-export const getCharWidth = Computed((char, fontSize, font) => {
-  return font?.getAdvanceWidth(char, fontSize) || (fontSize * 1229) / 2048;
-});
+export const getCharWidth = Computed(
+  (char, fontSize, font) =>
+    font?.getAdvanceWidth(char, fontSize) || (fontSize * 1229) / 2048
+);
 
-export const getStringWidth = Computed((text, fontSize, font) => {
-  return font
+export const getStringWidth = Computed((text, fontSize, font) =>
+  font
     ? text
         .split("")
         .reduce((sum, char) => sum + getCharWidth(char, fontSize, font), 0)
-    : (text.length * fontSize * 1229) / 2048;
-});
+    : (text.length * fontSize * 1229) / 2048
+);
 
 export const getWords = Computed((text, fontSize, font) => {
   const spaceWidth = getStringWidth(" ", fontSize, font);

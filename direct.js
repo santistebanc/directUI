@@ -26,35 +26,34 @@ export class Props {
 }
 
 export function Auto(func) {
-    console.log('SSS')
   const track = () => {
     trackers.add(track);
     func();
     trackers.delete(track);
   };
   track();
-  console.log('EEE')
 }
 
 export function State(initialValue) {
-  const output = {
-    value: initialValue,
-    observers: new Set(),
-    get: () => {
-      [...computeds].forEach((func) => func(output, output.value));
-      [...trackers].forEach((func) => output.observers.add(func));
-      return output.value;
-    },
-    set: (newVal) => {
-      output.value = newVal;
-      [...output.observers].forEach((obs) => {
-          output.observers.delete(obs);
-        obs();
-      });
-      return output.value;
-    },
+  const get = () => {
+    [...computeds].forEach((func) => func(get, get.value));
+    [...trackers].forEach((func) => get.observers.add(func));
+    return get.value;
   };
-  return output;
+
+  get.value = initialValue;
+  get.observers = new Set();
+  get.get = get;
+  get.set = (newVal) => {
+    get.value = newVal;
+    [...get.observers].forEach((obs) => {
+      get.observers.delete(obs);
+      obs();
+    });
+    return get.value;
+  };
+  get.isState = true;
+  return get;
 }
 
 export function Computed(func, { limit, name } = {}) {
@@ -63,7 +62,7 @@ export function Computed(func, { limit, name } = {}) {
   let last;
 
   return (...args) => {
-    const stateValues = [...states.keys()].map((state) => state.get());
+    const stateValues = [...states.keys()].map((state) => state());
     const input = [...args, ...stateValues];
 
     const valueInMemo = memo.get(input);

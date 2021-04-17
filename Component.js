@@ -5,18 +5,11 @@ export let count = 0;
 export function Component(defaultProps, methods) {
   return (template = {}) => {
     function render(attributes) {
-      const store = Object.fromEntries(
+      const state = Object.fromEntries(
         Object.entries(template.state ?? {}).map(([key, initialVal]) => [
           key,
           State(initialVal, key),
         ])
-      );
-
-      const state = Object.fromEntries(
-        Object.entries(store).map(([key, st]) => {
-          st.get.isState = true;
-          return [key, st.get];
-        })
       );
 
       const props = new Props({
@@ -60,7 +53,7 @@ export function Component(defaultProps, methods) {
 
       output.setState = (newState) => {
         Object.entries(newState).forEach(([key, val]) => {
-          store[key].set(val);
+          state[key].set(val);
         });
       };
 
