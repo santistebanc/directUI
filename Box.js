@@ -1,9 +1,9 @@
 import { Component } from "./Component";
-import { Cached, parse } from "./direct";
+import { Computed, parse } from "./direct";
 import { isFunction } from "./utils";
 
 export const defaultProps = {
-  type: "box",
+  classes: ["box"],
   children: [],
   paddingLeft: 0,
   paddingTop: 0,
@@ -19,7 +19,7 @@ export const defaultProps = {
   y: 0,
 };
 
-export const getDimensions = Cached((index, props) => {
+export const getDimensions = Computed((child, props) => {
   const {
     children,
     width,
@@ -40,6 +40,8 @@ export const getDimensions = Cached((index, props) => {
   let totalWidth = 0;
   let totalHeight = 0;
 
+  const index = children.indexOf(child);
+
   if (index > 0) {
     const {
       itemX,
@@ -48,7 +50,7 @@ export const getDimensions = Cached((index, props) => {
       singleLineHeight,
       containerWidth,
       containerHeight,
-    } = getDimensions(index - 1, props);
+    } = getDimensions(children[index - 1], props);
 
     startX = itemX + itemWidth + gapHorizontal;
     startY = itemY;
@@ -64,9 +66,9 @@ export const getDimensions = Cached((index, props) => {
     maxHeight: availableHeight,
     maxWidth: availableWidth,
   };
-  const child = children[index].render(propsToPass);
-  const calculatedWidth = child.width;
-  const calculatedHeight = child.height;
+  const renderedChild = child.render(propsToPass);
+  const calculatedWidth = renderedChild.width;
+  const calculatedHeight = renderedChild.height;
 
   if (index === 0 || startX + calculatedWidth <= availableWidth + paddingLeft) {
     return {
@@ -114,11 +116,11 @@ export const getDimensions = Cached((index, props) => {
 export const getPropsToPassDown = (props) => {
   const { children } = parse(props);
 
-  return children.map((child, idx) => ({
-    maxWidth: () => getDimensions(idx, props).itemWidth,
-    maxHeight: () => getDimensions(idx, props).itemHeight,
-    x: () => getDimensions(idx, props).itemX,
-    y: () => getDimensions(idx, props).itemY,
+  return children.map((child) => ({
+    maxWidth: () => getDimensions(child, props).itemWidth,
+    maxHeight: () => getDimensions(child, props).itemHeight,
+    x: () => getDimensions(child, props).itemX,
+    y: () => getDimensions(child, props).itemY,
   }));
 };
 
@@ -137,7 +139,7 @@ export const getWidth = (props) => {
   return (
     width ??
     (children.length
-      ? getDimensions(children.length - 1, props).containerWidth
+      ? getDimensions(children[children.length - 1], props).containerWidth
       : 0)
   );
 };
@@ -147,7 +149,7 @@ export const getHeight = (props) => {
   return (
     height ??
     (children.length
-      ? getDimensions(children.length - 1, props).containerHeight
+      ? getDimensions(children[children.length - 1], props).containerHeight
       : 0)
   );
 };
@@ -160,6 +162,7 @@ export const BoxComponent = Component(defaultProps, {
   height: getHeight,
   x: ({ x }) => x(),
   y: ({ y }) => y(),
+  classes: ({ classes }) => classes(),
 });
 
 export function Box(...args) {

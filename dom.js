@@ -15,42 +15,87 @@ function getDiff(prev, next) {
   return { removed, added, kept };
 }
 
+export const components = new Set();
+
 export function mountToDOM(base, comp, props = {}) {
-  const el = document.createElement("div");
+  components.add(comp);
 
   let prevChildren = [];
 
-  const inst = comp.render({ el, ...props });
+  const inst = comp.render(props);
+
+  const { classes } = inst;
+  const isText = classes.includes("text");
+
+  comp.el = document.createElement(isText ? "span" : "div");
+  let styles = {};
 
   Auto(() => {
-    const { x, y, width, height, text } = inst;
+    if (!comp.el) return;
+    const {
+      x,
+      y,
+      width,
+      height,
+      text,
+      fontFamily,
+      fontSize,
+      lineHeight,
+    } = inst;
 
-    const styles = {
+    styles = {
+      ...styles,
+      ["opacity"]: `${comp.el.style.opacity}`,
       ["transform"]: `translate(${x}px,${y}px)`,
       ["width"]: `${width}px`,
       ["height"]: `${height}px`,
     };
 
-    el.style.cssText = getStylesString(styles);
+    if (isText) {
+      styles = {
+        ...styles,
+        ["font-family"]: fontFamily,
+        ["font-size"]: `${fontSize}px`,
+        ["line-height"]: `${lineHeight}px`,
+      };
+    }
 
-    if (text) el.textContent = text;
+    comp.el.style.cssText = getStylesString(styles);
+
+    if (text) comp.el.textContent = text;
   });
+
+  comp.el.style.opacity = "0";
+  setTimeout(() => (comp.el.style.opacity = "1"), 0);
 
   if (inst.childrenProp) {
     Auto(() => {
+      if (!comp.el) return;
       const { childrenProp, propsToPassDown } = inst;
 
-      const { added, removed, kept } = getDiff(prevChildren, childrenProp);
+      const { added, removed } = getDiff(prevChildren, childrenProp);
+
       added.forEach((child) => {
-        mountToDOM(el, child, propsToPassDown[childrenProp.indexOf(child)]);
+        mountToDOM(
+          comp.el,
+          child,
+          propsToPassDown[childrenProp.indexOf(child)]
+        );
       });
-      // removed.forEach((child) => mountToDOM(el, child));
+      removed.forEach((child) => {
+        child.el.style.opacity = "0";
+        setTimeout(() => {
+          child.el.remove();
+          child.el = null;
+          components.delete(child);
+        }, 500);
+      });
 
       prevChildren = childrenProp;
     });
   }
 
-  base.appendChild(el);
+  base.appendChild(comp.el);
 
   return inst;
 }

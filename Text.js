@@ -1,9 +1,9 @@
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
-import { Cached, parse } from "./direct";
+import { Computed, parse } from "./direct";
 
 export const defaultProps = {
-  type: "text",
+  classes: ["text"],
   text: "",
   fontSize: DEFAULT_FONT_SIZE,
   lineHeight: DEFAULT_LINE_HEIGHT,
@@ -14,11 +14,11 @@ export const defaultProps = {
   font: null,
 };
 
-export const getCharWidth = Cached((char, fontSize, font) => {
+export const getCharWidth = Computed((char, fontSize, font) => {
   return font?.getAdvanceWidth(char, fontSize) || (fontSize * 1229) / 2048;
 });
 
-export const getStringWidth = Cached((text, fontSize, font) => {
+export const getStringWidth = Computed((text, fontSize, font) => {
   return font
     ? text
         .split("")
@@ -26,7 +26,7 @@ export const getStringWidth = Cached((text, fontSize, font) => {
     : (text.length * fontSize * 1229) / 2048;
 });
 
-export const getWords = Cached((text, fontSize, font) => {
+export const getWords = Computed((text, fontSize, font) => {
   const spaceWidth = getStringWidth(" ", fontSize, font);
   let widthSoFar = 0;
   return text.split(" ").map((wordText, i) => {
@@ -36,12 +36,12 @@ export const getWords = Cached((text, fontSize, font) => {
   });
 });
 
-export const getMaxWidth = Cached((maxWidth, text, fontSize, font) => {
+export const getMaxWidth = Computed((maxWidth, text, fontSize, font) => {
   const words = getWords(text, fontSize, font);
   return Math.min(maxWidth, words[words.length - 1][2]);
 });
 
-export const getLines = Cached((maxWidth, text, fontSize, font) => {
+export const getLines = Computed((maxWidth, text, fontSize, font) => {
   const spaceWidth = getStringWidth(" ", fontSize, font);
   const availableWidth = getMaxWidth(maxWidth, text, fontSize, font);
   const words = getWords(text, fontSize, font);
@@ -98,6 +98,7 @@ export const TextComponent = Component(defaultProps, {
   fontFamily: ({ font }) => font()?.names.fontFamily.en ?? "Courier New",
   fontSize: ({ fontSize }) => fontSize(),
   lineHeight: ({ lineHeight }) => lineHeight(),
+  classes: ({ classes }) => classes(),
 });
 
 export function Text(...args) {

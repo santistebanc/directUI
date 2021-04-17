@@ -6,7 +6,9 @@ const title = Text(({ page }) => "hello world " + page());
 
 const content = Text("this is the content of the page");
 
-const container = Box(({ page }) => [title({ page }), content]);
+const container = Box(({ page }) =>
+  page() % 2 === 1 ? [content] : [title({ page }), content]
+);
 
 const main = Box(({ page }) => [container({ page })], {
   state: {

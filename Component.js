@@ -1,4 +1,4 @@
-import { Props, State, Cached } from "./direct";
+import { Props, State, Computed } from "./direct";
 
 export let count = 0;
 
@@ -27,7 +27,7 @@ export function Component(defaultProps, methods) {
       });
 
       const parsedMethods = Object.fromEntries(
-        Object.entries(methods).map(([key, method]) => [key, Cached(method)])
+        Object.entries(methods).map(([key, method]) => [key, Computed(method)])
       );
 
       const output = Object.defineProperties(
