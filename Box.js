@@ -1,5 +1,5 @@
 import { Component } from "./Component";
-import { Computed, parse } from "./direct";
+import { Cached, parse } from "./direct";
 import { isFunction, objectIsEqual } from "./utils";
 
 export const defaultProps = {
@@ -29,7 +29,7 @@ export function getIndexOfChild(children, child) {
       );
 }
 
-export const getDimensions = Computed((child, props) => {
+export const getDimensions = Cached((child, props) => {
   const {
     children,
     width,

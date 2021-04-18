@@ -1,6 +1,6 @@
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
-import { Computed, parse } from "./direct";
+import { parse } from "./direct";
 import { getWidth as getTextWidth, getHeight as getTextHeight } from "./Text";
 
 export const defaultProps = {

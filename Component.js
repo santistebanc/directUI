@@ -1,4 +1,4 @@
-import { Props, State, Computed } from "./direct";
+import { Props, State, Cached } from "./direct";
 import Memo from "./Memo";
 import { defineGetters, mapEntries, getDeterministicKeys } from "./utils";
 
@@ -9,19 +9,18 @@ export const components = Memo({ limit: 1000 });
 export function Component(type, defaultProps, methods) {
   return (template = {}) => {
     function render(inheritedProps, attributes) {
-      const parsedInheritedProps = inheritedProps.parent
-        ? { parent: inheritedProps.parent }
-        : inheritedProps;
-      const keys = getDeterministicKeys({
-        type,
-        ...attributes,
-        ...parsedInheritedProps,
-      });
-      const compInMemo = components.get(keys);
-      if (compInMemo) return compInMemo;
-
       const inst = {};
-      components.set(keys, inst);
+      if (inheritedProps.parent) {
+        const keys = getDeterministicKeys({
+          type,
+          ...attributes,
+          parent: inheritedProps.parent,
+        });
+        const compInMemo = components.get(keys);
+        if (compInMemo) return compInMemo;
+
+        components.set(keys, inst);
+      }
 
       const state = mapEntries(template.state ?? {}, ([key, initialVal]) => [
         key,
@@ -40,7 +39,7 @@ export function Component(type, defaultProps, methods) {
 
       const parsedMethods = mapEntries(
         { ...props, ...methods },
-        ([key, method]) => [key, Computed(method)]
+        ([key, method]) => [key, Cached(method)]
       );
 
       defineGetters(inst, parsedMethods, (func) => func(props));

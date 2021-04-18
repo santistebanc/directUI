@@ -1,6 +1,6 @@
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
-import { Computed, parse } from "./direct";
+import { Cached, parse } from "./direct";
 
 export const defaultProps = {
   text: "",
@@ -13,12 +13,12 @@ export const defaultProps = {
   font: null,
 };
 
-export const getCharWidth = Computed(
+export const getCharWidth = Cached(
   (char, fontSize, font) =>
     font?.getAdvanceWidth(char, fontSize) || (fontSize * 1229) / 2048
 );
 
-export const getStringWidth = Computed((text, fontSize, font) =>
+export const getStringWidth = Cached((text, fontSize, font) =>
   font
     ? text
         .split("")
@@ -26,7 +26,7 @@ export const getStringWidth = Computed((text, fontSize, font) =>
     : (text.length * fontSize * 1229) / 2048
 );
 
-export const getWords = Computed((text, fontSize, font) => {
+export const getWords = Cached((text, fontSize, font) => {
   const spaceWidth = getStringWidth(" ", fontSize, font);
   let widthSoFar = 0;
   return text.split(" ").map((wordText, i) => {
@@ -36,12 +36,12 @@ export const getWords = Computed((text, fontSize, font) => {
   });
 });
 
-export const getMaxWidth = Computed((maxWidth, text, fontSize, font) => {
+export const getMaxWidth = Cached((maxWidth, text, fontSize, font) => {
   const words = getWords(text, fontSize, font);
   return Math.min(maxWidth, words[words.length - 1][2]);
 });
 
-export const getLines = Computed((maxWidth, text, fontSize, font) => {
+export const getLines = Cached((maxWidth, text, fontSize, font) => {
   const spaceWidth = getStringWidth(" ", fontSize, font);
   const availableWidth = getMaxWidth(maxWidth, text, fontSize, font);
   const words = getWords(text, fontSize, font);

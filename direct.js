@@ -1,8 +1,8 @@
 import Memo from "./Memo";
 import { isFunction, mapEntries } from "./utils";
 
+export let autos = new Set();
 export let trackers = new Set();
-export let computeds = new Set();
 
 export function parse(props) {
   return mapEntries(props, ([key, val]) => [
@@ -15,27 +15,27 @@ export class Props {
   constructor(props) {
     Object.entries(props).forEach(([key, prop]) => {
       this[key] = isFunction(prop)
-        ? prop.isState
+        ? prop.isState || prop.isCached
           ? prop
-          : Computed(() => prop(props))
-        : Computed(() => prop);
+          : Cached(() => prop(props))
+        : Cached(() => prop);
     });
   }
 }
 
 export function Auto(func) {
   const track = () => {
-    trackers.add(track);
+    autos.add(track);
     func();
-    trackers.delete(track);
+    autos.delete(track);
   };
   track();
 }
 
 export function State(initialValue) {
   const get = () => {
-    [...computeds].forEach((func) => func(get, get.value));
-    [...trackers].forEach((func) => get.observers.add(func));
+    [...trackers].forEach((func) => func(get, get.value));
+    [...autos].forEach((func) => get.observers.add(func));
     return get.value;
   };
 
@@ -54,12 +54,12 @@ export function State(initialValue) {
   return get;
 }
 
-export function Computed(func, { limit } = {}) {
+export function Cached(func, { limit } = {}) {
   const memo = Memo({ limit });
   const states = new Map();
   let last;
 
-  return (...args) => {
+  const output = (...args) => {
     const stateValues = [...states.keys()].map((state) => state());
     const input = [...args, ...stateValues];
 
@@ -73,13 +73,15 @@ export function Computed(func, { limit } = {}) {
       states.set(obj, value);
     };
 
-    computeds.add(onReadState);
+    trackers.add(onReadState);
     last = func(...args);
-    computeds.delete(onReadState);
+    trackers.delete(onReadState);
 
     const keys = [...args, ...[...states.values()]];
     memo.set(keys, last);
 
     return last;
   };
+  output.isCached = true;
+  return output;
 }
