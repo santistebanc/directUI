@@ -3,6 +3,7 @@ import { State } from "./direct";
 import { mountToDOM } from "./dom";
 import { Text } from "./Text";
 import opentype from "opentype.js";
+import { Input } from "./Input";
 
 const font = State(null);
 
@@ -12,9 +13,9 @@ const title = Text(({ page }) => "hello world " + page(), { font });
 
 const content = Text("this is the content of the page", { font });
 
-const container = Box(({ page }) =>
-  page() % 2 === 1 ? [content] : [title({ page }), content]
-);
+const input = Input("test here", { font });
+
+const container = Box(({ page }) => page() % 2 === 0 ? [input, content, title({ page })] : [title({ page }), content]);
 
 const main = Box(({ page }) => [container({ page })], {
   state: {
@@ -23,7 +24,7 @@ const main = Box(({ page }) => [container({ page })], {
     screenHeight: window.innerHeight,
   },
   width: ({ screenWidth }) => screenWidth(),
-  height: ({ screenHeight }) => screenHeight(),
+  height: ({ screenHeight }) => screenHeight() / 2,
   paddingLeft: 10,
   paddingRight: 10,
   paddingTop: 10,

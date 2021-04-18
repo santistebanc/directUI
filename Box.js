@@ -1,9 +1,8 @@
 import { Component } from "./Component";
 import { Computed, parse } from "./direct";
-import { isFunction } from "./utils";
+import { isFunction, objectIsEqual } from "./utils";
 
 export const defaultProps = {
-  classes: ["box"],
   children: [],
   paddingLeft: 0,
   paddingTop: 0,
@@ -18,6 +17,17 @@ export const defaultProps = {
   x: 0,
   y: 0,
 };
+
+export function getIndexOfChild(children, child) {
+  return children.indexOf(child) !== -1
+    ? children.indexOf(child)
+    : children.findIndex(
+        (ch) =>
+          ch.attributes &&
+          child.attributes &&
+          objectIsEqual(ch.attributes, child.attributes)
+      );
+}
 
 export const getDimensions = Computed((child, props) => {
   const {
@@ -40,7 +50,7 @@ export const getDimensions = Computed((child, props) => {
   let totalWidth = 0;
   let totalHeight = 0;
 
-  const index = children.indexOf(child);
+  const index = getIndexOfChild(children, child);
 
   if (index > 0) {
     const {
@@ -114,13 +124,14 @@ export const getDimensions = Computed((child, props) => {
 });
 
 export const getPropsToPassDown = (props) => {
-  const { children } = parse(props);
+  const { children, self } = parse(props);
 
   return children.map((child) => ({
     maxWidth: () => getDimensions(child, props).itemWidth,
     maxHeight: () => getDimensions(child, props).itemHeight,
     x: () => getDimensions(child, props).itemX,
     y: () => getDimensions(child, props).itemY,
+    parent: self,
   }));
 };
 
@@ -154,15 +165,12 @@ export const getHeight = (props) => {
   );
 };
 
-export const BoxComponent = Component(defaultProps, {
+export const BoxComponent = Component("box", defaultProps, {
   childrenProp: ({ children }) => children(),
   children: getChildren,
   propsToPassDown: getPropsToPassDown,
   width: getWidth,
   height: getHeight,
-  x: ({ x }) => x(),
-  y: ({ y }) => y(),
-  classes: ({ classes }) => classes(),
 });
 
 export function Box(...args) {

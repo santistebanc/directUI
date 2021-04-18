@@ -1,16 +1,14 @@
 import Memo from "./Memo";
-import { isFunction } from "./utils";
+import { isFunction, mapEntries } from "./utils";
 
 export let trackers = new Set();
 export let computeds = new Set();
 
 export function parse(props) {
-  return Object.fromEntries(
-    Object.entries(props).map(([key, val]) => [
-      key,
-      isFunction(val) ? val() : val,
-    ])
-  );
+  return mapEntries(props, ([key, val]) => [
+    key,
+    isFunction(val) ? val() : val,
+  ]);
 }
 
 export class Props {
@@ -56,7 +54,7 @@ export function State(initialValue) {
   return get;
 }
 
-export function Computed(func, { limit, name } = {}) {
+export function Computed(func, { limit } = {}) {
   const memo = Memo({ limit });
   const states = new Map();
   let last;

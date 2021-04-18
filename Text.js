@@ -3,7 +3,6 @@ import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
 import { Computed, parse } from "./direct";
 
 export const defaultProps = {
-  classes: ["text"],
   text: "",
   fontSize: DEFAULT_FONT_SIZE,
   lineHeight: DEFAULT_LINE_HEIGHT,
@@ -90,16 +89,10 @@ export const getHeight = (props) => {
   return linesCount * lineHeight;
 };
 
-export const TextComponent = Component(defaultProps, {
-  text: ({ text }) => text(),
-  x: ({ x }) => x(),
-  y: ({ y }) => y(),
+export const TextComponent = Component("text", defaultProps, {
   width: getWidth,
   height: getHeight,
   fontFamily: ({ font }) => font()?.names.fontFamily.en ?? "Courier New",
-  fontSize: ({ fontSize }) => fontSize(),
-  lineHeight: ({ lineHeight }) => lineHeight(),
-  classes: ({ classes }) => classes(),
 });
 
 export function Text(...args) {

@@ -1,70 +1,71 @@
 import { Props, State, Computed } from "./direct";
+import Memo from "./Memo";
+import { defineGetters, mapEntries, getDeterministicKeys } from "./utils";
 
 export let count = 0;
 
-export function Component(defaultProps, methods) {
+export const components = Memo({ limit: 1000 });
+
+export function Component(type, defaultProps, methods) {
   return (template = {}) => {
-    function render(attributes) {
-      const state = Object.fromEntries(
-        Object.entries(template.state ?? {}).map(([key, initialVal]) => [
-          key,
-          State(initialVal, key),
-        ])
-      );
+    function render(inheritedProps, attributes) {
+      const parsedInheritedProps = inheritedProps.parent
+        ? { parent: inheritedProps.parent }
+        : inheritedProps;
+      const keys = getDeterministicKeys({
+        type,
+        ...attributes,
+        ...parsedInheritedProps,
+      });
+      const compInMemo = components.get(keys);
+      if (compInMemo) return compInMemo;
+
+      const inst = {};
+      components.set(keys, inst);
+
+      const state = mapEntries(template.state ?? {}, ([key, initialVal]) => [
+        key,
+        State(initialVal, key),
+      ]);
 
       const props = new Props({
         ...defaultProps,
+        ...inheritedProps,
         ...template,
         ...attributes,
         ...state,
+        self: inst,
+        type,
       });
 
-      const parsedMethods = Object.fromEntries(
-        Object.entries(methods).map(([key, method]) => [key, Computed(method)])
+      const parsedMethods = mapEntries(
+        { ...props, ...methods },
+        ([key, method]) => [key, Computed(method)]
       );
 
-      const output = Object.defineProperties(
-        {},
-        Object.fromEntries(
-          Object.entries(parsedMethods).map(([key, func]) => [
-            key,
-            {
-              get() {
-                return func(props);
-              },
-            },
-          ])
-        )
-      );
+      defineGetters(inst, parsedMethods, (func) => func(props));
 
-      output.state = Object.defineProperties(
-        {},
-        Object.fromEntries(
-          Object.entries(state).map(([key, func]) => [
-            key,
-            {
-              get() {
-                return func();
-              },
-            },
-          ])
-        )
-      );
+      const definedState = defineGetters({}, state, (func) => func());
+      defineGetters(inst, { props, state: definedState }, (func) => func);
 
-      output.setState = (newState) => {
+      inst.setState = (newState) => {
         Object.entries(newState).forEach(([key, val]) => {
           state[key].set(val);
         });
       };
 
-      return output;
+      return inst;
     }
 
     const output = (attributes = {}) => ({
-      render: (extraAtts = {}) => render({ ...attributes, ...extraAtts }),
+      isTemplate: true,
+      attributes,
+      render: (inheritedProps = {}) => render(inheritedProps, attributes),
     });
 
     output.render = render;
+    output.isTemplate = true;
+
     return output;
   };
 }

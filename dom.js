@@ -15,23 +15,24 @@ function getDiff(prev, next) {
   return { removed, added, kept };
 }
 
-export const components = new Set();
-
 export function mountToDOM(base, comp, props = {}) {
-  components.add(comp);
-
   let prevChildren = [];
 
-  const inst = comp.render(props);
+  const inst = comp.isTemplate ? comp.render(props) : comp;
 
-  const { classes } = inst;
-  const isText = classes.includes("text");
+  const { type } = inst;
+  const isText = type === "text";
+  const isInput = type === "input";
 
-  comp.el = document.createElement(isText ? "span" : "div");
+  inst.el =
+    inst.el ??
+    document.createElement(isText ? "span" : isInput ? "textarea" : "div");
+
+  inst.isActive = true;
+
   let styles = {};
-
   Auto(() => {
-    if (!comp.el) return;
+    if (!inst.isActive) return;
     const {
       x,
       y,
@@ -45,13 +46,13 @@ export function mountToDOM(base, comp, props = {}) {
 
     styles = {
       ...styles,
-      ["opacity"]: `${comp.el.style.opacity}`,
+      ["opacity"]: `${inst.el.style.opacity}`,
       ["transform"]: `translate(${x}px,${y}px)`,
       ["width"]: `${width}px`,
       ["height"]: `${height}px`,
     };
 
-    if (isText) {
+    if (isText || isInput) {
       styles = {
         ...styles,
         ["font-family"]: fontFamily,
@@ -60,42 +61,37 @@ export function mountToDOM(base, comp, props = {}) {
       };
     }
 
-    comp.el.style.cssText = getStylesString(styles);
+    inst.el.style.cssText = getStylesString(styles);
 
-    if (text) comp.el.textContent = text;
+    if (text) inst.el.textContent = text;
   });
 
-  comp.el.style.opacity = "0";
-  setTimeout(() => (comp.el.style.opacity = "1"), 0);
+  inst.el.style.opacity = "0";
+  setTimeout(() => (inst.el.style.opacity = "1"), 0);
 
-  if (inst.childrenProp) {
+  if (inst.children) {
     Auto(() => {
-      if (!comp.el) return;
-      const { childrenProp, propsToPassDown } = inst;
+      if (!inst.isActive) return;
+      const { children } = inst;
 
-      const { added, removed } = getDiff(prevChildren, childrenProp);
+      const { added, removed } = getDiff(prevChildren, children);
 
       added.forEach((child) => {
-        mountToDOM(
-          comp.el,
-          child,
-          propsToPassDown[childrenProp.indexOf(child)]
-        );
+        mountToDOM(inst.el, child);
       });
       removed.forEach((child) => {
         child.el.style.opacity = "0";
         setTimeout(() => {
+          child.isActive = false;
           child.el.remove();
-          child.el = null;
-          components.delete(child);
         }, 500);
       });
 
-      prevChildren = childrenProp;
+      prevChildren = children;
     });
   }
 
-  base.appendChild(comp.el);
+  base.appendChild(inst.el);
 
   return inst;
 }
