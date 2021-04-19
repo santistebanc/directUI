@@ -1,6 +1,6 @@
 import { Component } from "./Component";
-import { Cached, parse } from "./direct";
-import { isFunction, objectIsEqual } from "./utils";
+import { Cached, context, parse } from "./direct";
+import { isFunction, mapEntries, objectIsEqual } from "./utils";
 
 export const defaultProps = {
   children: [],
@@ -18,14 +18,38 @@ export const defaultProps = {
   y: 0,
 };
 
+export function resolveProps(obj) {
+  const output = Object.defineProperties(
+    {},
+    mapEntries(obj, ([key, val]) => [
+      key,
+      {
+        configurable: true,
+        get() {
+          return isFunction(val) && !val.isState ? val(output) : val;
+        },
+      },
+    ])
+  );
+
+  return Object.fromEntries(
+    Object.entries(
+      Object.getOwnPropertyDescriptors(output)
+    ).map(([key, desc]) => [key, desc.get()])
+  );
+}
+
 export function getIndexOfChild(children, child) {
   return children.indexOf(child) !== -1
     ? children.indexOf(child)
     : children.findIndex(
         (ch) =>
-          ch.attributes &&
-          child.attributes &&
-          objectIsEqual(ch.attributes, child.attributes)
+          ch.templateId &&
+          child.templateId &&
+          objectIsEqual(
+            resolveProps(ch.templateId),
+            resolveProps(child.templateId)
+          )
       );
 }
 
@@ -73,6 +97,7 @@ export const getDimensions = Cached((child, props) => {
   const availableHeight = (height ?? maxHeight) - paddingTop - paddingBottom;
 
   const propsToPass = {
+    static: true,
     maxHeight: availableHeight,
     maxWidth: availableWidth,
   };
@@ -123,7 +148,7 @@ export const getDimensions = Cached((child, props) => {
   }
 });
 
-export const getPropsToPassDown = (props) => {
+export const getPropsToPassDown = Cached((props) => {
   const { children, self } = parse(props);
 
   return children.map((child) => ({
@@ -133,9 +158,9 @@ export const getPropsToPassDown = (props) => {
     y: () => getDimensions(child, props).itemY,
     parent: self,
   }));
-};
+});
 
-export const getChildren = (props) => {
+export const getChildren = Cached((props) => {
   const { children } = parse(props);
 
   const propsToPass = getPropsToPassDown(props);
@@ -143,9 +168,9 @@ export const getChildren = (props) => {
   return children.map((child, idx) => {
     return child.render(propsToPass[idx]);
   });
-};
+});
 
-export const getWidth = (props) => {
+export const getWidth = Cached((props) => {
   const { children, width } = parse(props);
   return (
     width ??
@@ -153,9 +178,9 @@ export const getWidth = (props) => {
       ? getDimensions(children[children.length - 1], props).containerWidth
       : 0)
   );
-};
+});
 
-export const getHeight = (props) => {
+export const getHeight = Cached((props) => {
   const { children, height } = parse(props);
   return (
     height ??
@@ -163,7 +188,7 @@ export const getHeight = (props) => {
       ? getDimensions(children[children.length - 1], props).containerHeight
       : 0)
   );
-};
+});
 
 export const BoxComponent = Component("box", defaultProps, {
   childrenProp: ({ children }) => children(),

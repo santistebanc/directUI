@@ -40,3 +40,12 @@ export function getDeterministicKeys(obj) {
 export function objectIsEqual(a, b) {
   return !Object.values(a).some((x) => !Object.values(b).includes(x));
 }
+
+export function inject(func, before, after) {
+  return (...args) => {
+    before(...args);
+    const output = func(...args);
+    after(...args);
+    return output;
+  };
+}

@@ -1,6 +1,6 @@
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
-import { parse } from "./direct";
+import { Cached, parse } from "./direct";
 import { getWidth as getTextWidth, getHeight as getTextHeight } from "./Text";
 
 export const defaultProps = {
@@ -22,19 +22,19 @@ export const defaultProps = {
   expandY: false,
 };
 
-export const getWidth = (props) => {
+export const getWidth = Cached((props) => {
   const { width, maxWidth, expandX } = parse(props);
   const textWidth = getTextWidth(props);
   const resWidth = width != null ? width : expandX ? maxWidth : textWidth;
   return Math.min(maxWidth, Math.max(textWidth, resWidth));
-};
+});
 
-export const getHeight = (props) => {
+export const getHeight = Cached((props) => {
   const { height, maxHeight, lineHeight, expandY } = parse(props);
   const textHeight = getTextHeight(props);
   const resHeight = height != null ? height : expandY ? maxHeight : lineHeight;
   return Math.min(maxHeight, Math.max(textHeight, resHeight));
-};
+});
 
 export const InputComponent = Component("input", defaultProps, {
   width: getWidth,

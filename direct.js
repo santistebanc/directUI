@@ -3,6 +3,7 @@ import { isFunction, mapEntries } from "./utils";
 
 export let autos = new Set();
 export let trackers = new Set();
+export let context = {};
 
 export function parse(props) {
   return mapEntries(props, ([key, val]) => [
@@ -11,14 +12,25 @@ export function parse(props) {
   ]);
 }
 
+function injectContext(func, ownContext) {
+  let prevContext;
+  return (...args) => {
+    prevContext = context;
+    context = ownContext;
+    const output = func(...args);
+    context = prevContext;
+    return output;
+  };
+}
+
 export class Props {
   constructor(props) {
     Object.entries(props).forEach(([key, prop]) => {
       this[key] = isFunction(prop)
         ? prop.isState || prop.isCached
-          ? prop
-          : Cached(() => prop(props))
-        : Cached(() => prop);
+          ? injectContext(prop, { props })
+          : injectContext(() => prop(props), { props })
+        : injectContext(() => prop, { props });
     });
   }
 }

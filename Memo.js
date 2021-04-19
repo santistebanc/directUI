@@ -1,4 +1,5 @@
-export default function Memo({ limit = 10 } = {}) {
+export default function Memo({ limit = 100 } = {}) {
+  let count = 0;
   const memo = new Map();
   const get = (keys) => {
     let iter = memo;
@@ -17,10 +18,12 @@ export default function Memo({ limit = 10 } = {}) {
       const key = keys[i];
       if (iter.size >= limit) {
         iter.delete([...iter.keys()][0]);
+        count--;
       }
       if (!iter.has(key)) iter.set(key, new Map());
       if (i === keys.length - 1) {
         iter.get(key).set("_result", val);
+        count++;
         return val;
       }
       iter = iter.get(key);
@@ -31,12 +34,18 @@ export default function Memo({ limit = 10 } = {}) {
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       iter = iter.get(key);
-      if (i === keys.length - 1) iter.delete("_result");
+      if (i === keys.length - 1) {
+        iter.delete("_result");
+        count--;
+      }
     }
   };
   const clear = () => {
     memo.clear();
+    count = 0;
   };
+
+  const size = () => count;
 
   const print = () => {
     const entries = [];
@@ -53,5 +62,5 @@ export default function Memo({ limit = 10 } = {}) {
     printIter(memo, []);
     return entries.join("\n");
   };
-  return { get, set, del, clear, print };
+  return { get, set, del, clear, size, print };
 }

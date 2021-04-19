@@ -1,5 +1,5 @@
 import { Box } from "./Box";
-import { State } from "./direct";
+import { context, State } from "./direct";
 import { mountToDOM } from "./dom";
 import { Text } from "./Text";
 import opentype from "opentype.js";
@@ -15,9 +15,11 @@ const content = Text("this is the content of the page", { font });
 
 const input = Input("test here", { font });
 
-const container = Box(({ page }) => page() % 2 === 0 ? [input, content, title({ page })] : [title({ page }), content]);
+const container = Box(({ page }) =>
+  page() % 2 === 1 ? [Text("test"), content] : [Text("second"), Text("test")]
+);
 
-const main = Box(({ page }) => [container({ page })], {
+const main = Box(({ page }) => page() % 5 !== 4 ? [container({ page }), content, Text(()=>'..........')] : [Text('non')], {
   state: {
     page: 1,
     screenWidth: window.innerWidth,

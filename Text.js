@@ -77,17 +77,17 @@ export const getLines = Cached((maxWidth, text, fontSize, font) => {
   return lines;
 });
 
-export const getWidth = (props) => {
+export const getWidth = Cached((props) => {
   const { maxWidth, text, fontSize, font } = parse(props);
   if (getLines(maxWidth, text, fontSize, font) > 1) return maxWidth;
   return getMaxWidth(maxWidth, text, fontSize, font);
-};
+});
 
-export const getHeight = (props) => {
+export const getHeight = Cached((props) => {
   const { maxWidth, text, fontSize, lineHeight, font } = parse(props);
   const linesCount = getLines(maxWidth, text, fontSize, font);
   return linesCount * lineHeight;
-};
+});
 
 export const TextComponent = Component("text", defaultProps, {
   width: getWidth,
