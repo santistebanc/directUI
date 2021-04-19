@@ -1,5 +1,5 @@
 import { Component } from "./Component";
-import { Cached, context, parse } from "./direct";
+import { Cached, parse } from "./direct";
 import { isFunction, mapEntries, objectIsEqual } from "./utils";
 
 export const defaultProps = {
@@ -66,7 +66,7 @@ export const getDimensions = Cached((child, props) => {
     paddingBottom,
     gapHorizontal,
     gapVertical,
-  } = parse(props);
+  } = props;
 
   let startX = paddingLeft;
   let startY = paddingTop;
@@ -148,30 +148,31 @@ export const getDimensions = Cached((child, props) => {
   }
 });
 
-export const getPropsToPassDown = Cached((props) => {
-  const { children, self } = parse(props);
+export const propsToPassDown = Cached((props) => {
+  const { children, self } = props;
 
-  return children.map((child) => ({
+  return children.map((child, idx) => ({
     maxWidth: () => getDimensions(child, props).itemWidth,
     maxHeight: () => getDimensions(child, props).itemHeight,
     x: () => getDimensions(child, props).itemX,
     y: () => getDimensions(child, props).itemY,
+    index: idx,
     parent: self,
   }));
 });
 
-export const getChildren = Cached((props) => {
-  const { children } = parse(props);
+export const children = Cached((props) => {
+  const { children } = props;
 
-  const propsToPass = getPropsToPassDown(props);
+  const propsToPass = propsToPassDown(props);
 
   return children.map((child, idx) => {
     return child.render(propsToPass[idx]);
   });
 });
 
-export const getWidth = Cached((props) => {
-  const { children, width } = parse(props);
+export const width = Cached((props) => {
+  const { children, width } = props;
   return (
     width ??
     (children.length
@@ -180,8 +181,8 @@ export const getWidth = Cached((props) => {
   );
 });
 
-export const getHeight = Cached((props) => {
-  const { children, height } = parse(props);
+export const height = Cached((props) => {
+  const { children, height } = props;
   return (
     height ??
     (children.length
@@ -190,12 +191,17 @@ export const getHeight = Cached((props) => {
   );
 });
 
+export const childrenProp = (props) => {
+  const { children } = props;
+  return children;
+};
+
 export const BoxComponent = Component("box", defaultProps, {
-  childrenProp: ({ children }) => children(),
-  children: getChildren,
-  propsToPassDown: getPropsToPassDown,
-  width: getWidth,
-  height: getHeight,
+  childrenProp,
+  children,
+  propsToPassDown,
+  width,
+  height,
 });
 
 export function Box(...args) {

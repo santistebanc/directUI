@@ -1,12 +1,13 @@
 import Memo from "./Memo";
-import { isFunction, mapEntries } from "./utils";
+import { defineGetters, isFunction, mapEntries } from "./utils";
 
 export let autos = new Set();
 export let trackers = new Set();
 export let context = {};
+export let statePending = null;
 
-export function parse(props) {
-  return mapEntries(props, ([key, val]) => [
+export function parse(props, defautProps = {}) {
+  return mapEntries({ ...defautProps, ...props }, ([key, val]) => [
     key,
     isFunction(val) ? val() : val,
   ]);
@@ -23,16 +24,14 @@ function injectContext(func, ownContext) {
   };
 }
 
-export class Props {
-  constructor(props) {
-    Object.entries(props).forEach(([key, prop]) => {
-      this[key] = isFunction(prop)
-        ? prop.isState || prop.isCached
-          ? injectContext(prop, { props })
-          : injectContext(() => prop(props), { props })
-        : injectContext(() => prop, { props });
-    });
-  }
+export function Props(props, defaultProps) {
+  return defineGetters({}, props, (prop, key) =>
+    typeof defaultProps[key] === "undefined"
+      ? prop
+      : isFunction(prop)
+      ? injectContext(prop, { props })(props)
+      : prop
+  );
 }
 
 export function Auto(func) {
@@ -54,17 +53,60 @@ export function State(initialValue) {
   get.value = initialValue;
   get.observers = new Set();
   get.get = get;
-  get.set = (newVal) => {
-    get.value = newVal;
+  get.react = () => {
     [...get.observers].forEach((obs) => {
       get.observers.delete(obs);
       obs();
     });
+  };
+  get.set = (newVal) => {
+    get.value = isFunction(newVal) ? newVal(get.value) : newVal;
+    if (statePending == null) {
+      get.react();
+    } else {
+      statePending.push(get);
+    }
     return get.value;
   };
   get.isState = true;
   return get;
 }
+
+export function Store(initalValues) {
+  const output = mapEntries(initalValues, ([key, val]) => [key, State(val)]);
+
+  defineGetters(
+    output,
+    {
+      getState: (key) => {
+        if (Array.isArray(key))
+          return Object.fromEntries(key.map((k) => output[k]()));
+        return output[key]();
+      },
+      setState: (key, val) => {
+        if (val) {
+          if (Array.isArray(key))
+            return Object.fromEntries(key.map((k, i) => output[k].set(val[i])));
+          return output[key].set(val);
+        }
+        return mapEntries(key, ([k, v]) => output[k].set(v));
+      },
+    },
+    (method) => method
+  );
+
+  return output;
+}
+
+State.transaction = (func) => {
+  statePending = [];
+  const output = func();
+  statePending.forEach((st) => {
+    st.react();
+  });
+  statePending = null;
+  return output;
+};
 
 export function Cached(func, { limit } = {}) {
   const memo = Memo({ limit });

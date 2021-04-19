@@ -1,4 +1,4 @@
-import { Props, State, Cached, parse, context } from "./direct";
+import { Props, context } from "./direct";
 import Memo from "./Memo";
 import {
   defineGetters,
@@ -12,10 +12,18 @@ export let count = 0;
 export const components = Memo({ limit: 1000 });
 
 export function Component(type, defaultProps, resolvers) {
-  return (attributes = {}) => {
+  return (atts = {}) => {
     const parent = context.props?.self;
-    function render(renderProps = {}, passedProps = {}) {
+    const output = (extraProps = {}) => {
+      Object.assign(output.attributes, extraProps);
+      return output;
+    };
+    output.attributes = { ...atts };
+    output.isTemplate = true;
+    output.templateId = output.attributes;
+    output.render = (renderProps = {}) => {
       const inst = {};
+      const attributes = output.attributes;
 
       const keys = renderProps.static
         ? {
@@ -28,30 +36,27 @@ export function Component(type, defaultProps, resolvers) {
         ? {
             type,
             ...attributes,
-            ...passedProps,
             parent: renderProps.parent,
           }
         : parent
         ? {
             type,
             ...attributes,
-            ...passedProps,
             parent,
           }
         : {
             type,
             ...renderProps,
             ...attributes,
-            ...passedProps,
           };
 
-    //   console.log(
-    //     ".........",
-    //     !!renderProps.static,
-    //     !!parent,
-    //     !!renderProps.parent,
-    //     keys
-    //   );
+      //   console.log(
+      //     ".........",
+      //     !!renderProps.static,
+      //     !!parent,
+      //     !!renderProps.parent,
+      //     keys
+      //   );
 
       const id = getDeterministicKeys(keys);
       const compInMemo = components.get(id);
@@ -59,43 +64,21 @@ export function Component(type, defaultProps, resolvers) {
 
       components.set(id, inst);
 
-      const state = mapEntries(attributes.state ?? {}, ([key, initialVal]) => [
-        key,
-        State(initialVal, key),
-      ]);
-
-      const props = new Props({
+      const mergedProps = {
         ...defaultProps,
         ...renderProps,
         ...attributes,
-        ...passedProps,
-        ...state,
         self: inst,
         type,
-      });
-
-      defineGetters(inst, { ...props, ...resolvers }, (func) => func(props));
-
-      const definedState = defineGetters({}, state, (func) => func());
-      defineGetters(inst, { props, state: definedState }, (func) => func);
-
-      inst.setState = (newState) => {
-        Object.entries(newState).forEach(([key, val]) => {
-          state[key].set(val);
-        });
       };
 
-      return inst;
-    }
+      const props = Props(mergedProps, defaultProps);
 
-    const output = (passedProps = {}) => ({
-      isTemplate: true,
-      templateId: { ...attributes, ...passedProps },
-      render: (renderProps = {}) => render(renderProps, passedProps),
-    });
-    output.templateId = { ...attributes };
-    output.render = render;
-    output.isTemplate = true;
+      defineGetters(inst, Object.getOwnPropertyDescriptors(props), (desc) => desc.get());
+      defineGetters(inst, resolvers, (func) => func(props));
+
+      return inst;
+    };
 
     return output;
   };

@@ -1,7 +1,7 @@
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
 import { Cached, parse } from "./direct";
-import { getWidth as getTextWidth, getHeight as getTextHeight } from "./Text";
+import { width as textWidth, height as textHeight } from "./Text";
 
 export const defaultProps = {
   text: "",
@@ -22,24 +22,24 @@ export const defaultProps = {
   expandY: false,
 };
 
-export const getWidth = Cached((props) => {
-  const { width, maxWidth, expandX } = parse(props);
-  const textWidth = getTextWidth(props);
+export const width = Cached((props) => {
+  const { width, maxWidth, expandX } = props;
+  const textWidth = textWidth(props);
   const resWidth = width != null ? width : expandX ? maxWidth : textWidth;
   return Math.min(maxWidth, Math.max(textWidth, resWidth));
 });
 
-export const getHeight = Cached((props) => {
-  const { height, maxHeight, lineHeight, expandY } = parse(props);
-  const textHeight = getTextHeight(props);
+export const height = Cached((props) => {
+  const { height, maxHeight, lineHeight, expandY } = props;
+  const textHeight = textHeight(props);
   const resHeight = height != null ? height : expandY ? maxHeight : lineHeight;
   return Math.min(maxHeight, Math.max(textHeight, resHeight));
 });
 
 export const InputComponent = Component("input", defaultProps, {
-  width: getWidth,
-  height: getHeight,
-  fontFamily: ({ font }) => font()?.names.fontFamily.en ?? "Courier New",
+  width,
+  height,
+  fontFamily: ({ font }) => font?.call()?.names.fontFamily.en ?? "Courier New",
 });
 
 export function Input(...args) {

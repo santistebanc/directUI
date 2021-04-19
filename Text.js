@@ -77,22 +77,27 @@ export const getLines = Cached((maxWidth, text, fontSize, font) => {
   return lines;
 });
 
-export const getWidth = Cached((props) => {
-  const { maxWidth, text, fontSize, font } = parse(props);
+export const width = Cached((props) => {
+  const { maxWidth, text, fontSize, font } = props;
   if (getLines(maxWidth, text, fontSize, font) > 1) return maxWidth;
   return getMaxWidth(maxWidth, text, fontSize, font);
 });
 
-export const getHeight = Cached((props) => {
-  const { maxWidth, text, fontSize, lineHeight, font } = parse(props);
+export const height = Cached((props) => {
+  const { maxWidth, text, fontSize, lineHeight, font } = props;
   const linesCount = getLines(maxWidth, text, fontSize, font);
   return linesCount * lineHeight;
 });
 
+export const fontFamily = (props) => {
+  const { font } = props;
+  return font?.names.fontFamily.en ?? "Courier New";
+};
+
 export const TextComponent = Component("text", defaultProps, {
-  width: getWidth,
-  height: getHeight,
-  fontFamily: ({ font }) => font()?.names.fontFamily.en ?? "Courier New",
+  width,
+  height,
+  fontFamily,
 });
 
 export function Text(...args) {
