@@ -1,6 +1,6 @@
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
-import { Cached, parse } from "./direct";
+import { Cached } from "./direct";
 
 export const defaultProps = {
   text: "",
@@ -32,20 +32,16 @@ export const getWords = Cached((text, fontSize, font) => {
   return text.split(" ").map((wordText, i) => {
     const wordWidth = getStringWidth(wordText, fontSize, font);
     widthSoFar += wordWidth + (i > 0 ? spaceWidth : 0);
-    return [wordText, wordWidth, widthSoFar];
+    return { wordText, wordWidth, widthSoFar };
   });
 });
 
-export const getMaxWidth = Cached((maxWidth, text, fontSize, font) => {
-  const words = getWords(text, fontSize, font);
-  return Math.min(maxWidth, words[words.length - 1][2]);
-});
-
-export const getLines = Cached((maxWidth, text, fontSize, font) => {
+export const getLines = Cached((props) => {
+  const { text, fontSize, font } = props;
   const spaceWidth = getStringWidth(" ", fontSize, font);
-  const availableWidth = getMaxWidth(maxWidth, text, fontSize, font);
+  const availableWidth = getMaxWidth(props);
   const words = getWords(text, fontSize, font);
-  const totalWidth = words[words.length - 1][2];
+  const totalWidth = words[words.length - 1].widthSoFar;
   const aproxCutPoint = Math.ceil((words.length * availableWidth) / totalWidth);
 
   let lines = 0;
@@ -77,27 +73,28 @@ export const getLines = Cached((maxWidth, text, fontSize, font) => {
   return lines;
 });
 
-export const width = Cached((props) => {
+export const getMaxWidth = Cached((props) => {
   const { maxWidth, text, fontSize, font } = props;
-  if (getLines(maxWidth, text, fontSize, font) > 1) return maxWidth;
-  return getMaxWidth(maxWidth, text, fontSize, font);
+  const words = getWords(text, fontSize, font);
+  return Math.min(maxWidth, words[words.length - 1].widthSoFar);
+});
+
+export const width = Cached((props) => {
+  const { maxWidth } = props;
+  if (getLines(props) > 1) return maxWidth;
+  return getMaxWidth(props);
 });
 
 export const height = Cached((props) => {
-  const { maxWidth, text, fontSize, lineHeight, font } = props;
-  const linesCount = getLines(maxWidth, text, fontSize, font);
+  const { lineHeight } = props;
+  const linesCount = getLines(props);
   return linesCount * lineHeight;
 });
-
-export const fontFamily = (props) => {
-  const { font } = props;
-  return font?.names.fontFamily.en ?? "Courier New";
-};
 
 export const TextComponent = Component("text", defaultProps, {
   width,
   height,
-  fontFamily,
+  fontFamily: ({ font }) => font?.names.fontFamily.en ?? "Courier New",
 });
 
 export function Text(...args) {

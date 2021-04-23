@@ -1,4 +1,5 @@
 import { Auto } from "./direct";
+import { getDiff } from "./utils";
 
 function getStylesString(styles) {
   return Object.entries(styles).reduce(
@@ -7,18 +8,17 @@ function getStylesString(styles) {
   );
 }
 
-function getDiff(prev, next) {
-  const removed = [];
-  const kept = [];
-  prev.forEach((it) => (next.includes(it) ? kept.push(it) : removed.push(it)));
-  const added = next.filter((it) => !kept.includes(it));
-  return { removed, added, kept };
-}
+const deactivate = (comp) => {
+  comp.children?.forEach((ch) => deactivate(ch));
+  comp.isActive = false;
+};
 
-export function mountToDOM(base, comp, props = {}) {
+export function mountToDOM(base, comp) {
   let prevChildren = [];
 
-  const inst = comp.isTemplate ? comp.render(props) : comp;
+  const inst = comp.isTemplate ? comp.render() : comp;
+
+  inst.parent = inst.parent ?? "root";
 
   const { type } = inst;
   const isText = type === "text";
@@ -30,9 +30,35 @@ export function mountToDOM(base, comp, props = {}) {
 
   inst.isActive = true;
 
+  if (inst.children) {
+    Auto(() => {
+      if (!inst.isActive) return;
+
+      const { children } = inst;
+
+      const { added, removed } = getDiff(prevChildren, children);
+
+      removed.forEach((child) => {
+        deactivate(child);
+        child.el.style.opacity = "0";
+        setTimeout(() => {
+          child.el.remove();
+        }, 500);
+      });
+
+      added.forEach((child) => {
+        const newComp = mountToDOM(inst.el, child, inst);
+        newComp.parent = inst;
+      });
+
+      prevChildren = children;
+    });
+  }
+
   let styles = {};
   Auto(() => {
     if (!inst.isActive) return;
+
     const {
       x,
       y,
@@ -68,28 +94,6 @@ export function mountToDOM(base, comp, props = {}) {
 
   inst.el.style.opacity = "0";
   setTimeout(() => (inst.el.style.opacity = "1"), 0);
-
-  if (inst.children) {
-    Auto(() => {
-      if (!inst.isActive) return;
-      const { children } = inst;
-
-      const { added, removed } = getDiff(prevChildren, children);
-
-      added.forEach((child) => {
-        mountToDOM(inst.el, child);
-      });
-      removed.forEach((child) => {
-        child.el.style.opacity = "0";
-        setTimeout(() => {
-          child.isActive = false;
-          child.el.remove();
-        }, 500);
-      });
-
-      prevChildren = children;
-    });
-  }
 
   base.appendChild(inst.el);
 

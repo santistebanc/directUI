@@ -49,3 +49,39 @@ export function inject(func, before, after) {
     return output;
   };
 }
+
+export function gettersToObj(obj) {
+  return mapEntries(Object.getOwnPropertyDescriptors(obj), ([k, v]) => [
+    k,
+    v.get(),
+  ]);
+}
+
+export function getDiff(prev, next) {
+  const pool = [...next];
+  const dif = [];
+  const added = [];
+  const removed = [];
+  const kept = [];
+
+  prev.forEach((it) => {
+    const idx = pool.indexOf(it);
+    if (idx > -1) {
+      dif.push([it, 0]);
+      kept.push(it);
+      pool.splice(idx, 1);
+    } else {
+      dif.push([it, -1]);
+      removed.push(it);
+    }
+  });
+  pool.forEach((it) => {
+    dif.push([it, 1]);
+    added.push(it);
+  });
+  return { dif, added, kept, removed };
+}
+
+export function indicesOf(arr, value) {
+  return arr.map((e, i) => (e === value ? i : "")).filter(String);
+}
