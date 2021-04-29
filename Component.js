@@ -1,69 +1,73 @@
-import { Obj } from "./direct";
-import Memo from "./Memo";
-import { defineGetters, isFunction } from "./utils";
+import Collection from "./Collection";
+import { defineGetters, isFunction, mapEntries, serializeProps } from "./utils";
 
-export let count = 0;
+export const components = Collection();
 
-export const components = Memo({ limit: 1000 });
-
-export function Component(type, defaultProps, resolvers) {
+export function Component(type, resolvers, defaultProps) {
   return (atts = {}) => {
-    const allAtts = { ...atts };
-    const createTemplate = (idd) => {
-      console.log("creating new template", idd);
-      const output = (extraProps = {}) => {
-        Object.assign(allAtts, extraProps);
-        return Obj("templates", { type, ...allAtts }, createTemplate);
-      };
-      output.isTemplate = true;
-      output.attributes = { ...allAtts };
-      output.render = (renderProps = {}) => {
-        const createComponent = () => {
-          const inst = {};
-          const attributes = { ...allAtts };
+    function Template(attributes = {}) {
+      Object.assign(atts, attributes);
+      Template.attributes = { ...atts };
+      Template.id = atts.id;
+      return Template;
+    }
+    Template.type = type;
+    Template.defaultProps = defaultProps;
+    Template.resolvers = resolvers;
+    Template.isTemplate = true;
+    Template.render = (renderProps = {}) => {
+      const attributes = { ...atts };
 
-          const mergedProps = {
-            ...defaultProps,
-            ...renderProps,
-            ...attributes,
-            template: output,
+      const mergedProps = {
+        parent: () => null,
+        self: () => null,
+        ...defaultProps,
+        ...renderProps,
+        ...attributes,
+        template: Template,
+        type,
+        defaultProps,
+      };
+
+      const keys = mergedProps.id
+        ? {
             type,
-            defaultProps,
+            id: mergedProps.id,
+            parent: mergedProps.parent(),
+          }
+        : {
+            type,
+            parent: mergedProps.parent(),
+            ...serializeProps(attributes),
           };
 
-          const props = defineGetters({}, mergedProps, (prop, key) =>
-            typeof defaultProps[key] === "undefined"
-              ? prop
-              : isFunction(prop)
-              ? prop(props)
-              : prop
-          );
+      const inst = mergedProps.parent
+        ? components.getOrAdd(keys, (idd) => {
+            console.log("created new component", idd);
+            return {};
+          })
+        : {};
 
-          defineGetters(inst, Object.getOwnPropertyDescriptors(props), (desc) =>
-            desc.get()
-          );
-          defineGetters(inst, resolvers, (func) => func(props));
-          return inst;
-        };
+      const props = defineGetters(
+        {},
+        { ...mergedProps, self: () => inst },
+        (prop, key) =>
+          typeof defaultProps[key] === "undefined" || key === "self"
+            ? prop
+            : isFunction(prop)
+            ? prop(props)
+            : prop
+      );
 
-        const keys = {
-          template: output,
-          id: renderProps.id,
-          parentTemplate: renderProps.parentTemplate,
-          parentId: renderProps.parentId
-        };
+      //output: merge props with resolvers
+      defineGetters(inst, Object.getOwnPropertyDescriptors(props), (desc) =>
+        desc.get()
+      );
+      defineGetters(inst, resolvers, (func) => func(props));
 
-        return renderProps.parentTemplate
-          ? Obj("components", keys, (idd) => {
-              console.log("created new component", idd);
-              return createComponent(idd);
-            })
-          : createComponent();
-      };
-
-      return output;
+      return inst;
     };
 
-    return Obj("templates", { type, ...allAtts }, createTemplate);
+    return Template(atts);
   };
 }

@@ -1,3 +1,5 @@
+const RESULT = Symbol();
+
 export default function Memo({ limit = 100 } = {}) {
   let count = 0;
   const memo = new Map();
@@ -8,7 +10,7 @@ export default function Memo({ limit = 100 } = {}) {
       const key = keys[i];
       if (!iter.has(key)) return undefined;
       iter = iter.get(key);
-      if (i === keys.length - 1) return iter.get("_result");
+      if (i === keys.length - 1) return iter.get(RESULT);
     }
     return iter;
   };
@@ -22,7 +24,7 @@ export default function Memo({ limit = 100 } = {}) {
       }
       if (!iter.has(key)) iter.set(key, new Map());
       if (i === keys.length - 1) {
-        iter.get(key).set("_result", val);
+        iter.get(key).set(RESULT, val);
         count++;
         return val;
       }
@@ -35,7 +37,7 @@ export default function Memo({ limit = 100 } = {}) {
       const key = keys[i];
       iter = iter.get(key);
       if (i === keys.length - 1) {
-        iter.delete("_result");
+        iter.delete(RESULT);
         count--;
       }
     }
@@ -53,7 +55,7 @@ export default function Memo({ limit = 100 } = {}) {
       [...iter.keys()].forEach((k) => {
         const newKeys = [...keys, k];
         const val = iter.get(k);
-        if (k === "_result") {
+        if (k === RESULT) {
           entries.push(`(${keys.join(", ")})-> ${String(val)}`);
         } else {
           printIter(val, newKeys);

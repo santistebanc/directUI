@@ -2,12 +2,10 @@ import { Component } from "./Component";
 import { Cached } from "./direct";
 import {
   clone,
+  compsAreSame,
   defineGetters,
   gettersToObj,
-  indicesOf,
   isFunction,
-  mapEntries,
-  objectIsEqual,
 } from "./utils";
 
 export const defaultProps = {
@@ -120,28 +118,16 @@ export const getDimensions = Cached((index, props) => {
 });
 
 export const children = Cached((props) => {
-  const { children, template, id } = props;
+  const { children, template, self } = props;
+  const propsCopy = gettersToObj(props);
 
-  const childrenWithId = children.map((child, i) => {
-    const count = children.filter((x) => x == child).length;
-    const countAfter = children.slice(i).filter((x) => x == child).length;
-    return [child, count - countAfter];
-  });
-
-  const childrenCopy = [...children];
-
-  return childrenWithId.map(([child, childId], idx) => {
-    const dimensions = (prop) => ({ family }) => {
-      const index = indicesOf(props.children, child)[childId];
-      if (typeof index !== "undefined") {
+  return children.map((child, idx) => {
+    const dimensions = (prop) => ({ parentProps }) => {
+      const index = props.children.findIndex((ch) => compsAreSame(ch, child));
+      if (index > -1) {
         return getDimensions(index, props)[prop];
       } else {
-        const propsWithFixedChildren = defineGetters(
-          clone(props),
-          { children: family },
-          (prop) => prop
-        );
-        return getDimensions(idx, propsWithFixedChildren)[prop];
+        return getDimensions(idx, parentProps)[prop];
       }
     };
 
@@ -150,10 +136,9 @@ export const children = Cached((props) => {
       maxHeight: dimensions("itemHeight"),
       x: dimensions("itemX"),
       y: dimensions("itemY"),
-      family: childrenCopy,
+      parentProps: propsCopy,
       parentTemplate: template,
-      parentId: id,
-      id: childId,
+      parent: self,
     };
 
     return child.render(propsToPassDown);
@@ -180,12 +165,15 @@ export const height = Cached((props) => {
   );
 });
 
-export const BoxComponent = Component("box", defaultProps, {
-  childrenProp: ({ children }) => children,
-  children,
-  width,
-  height,
-});
+export const BoxComponent = Component(
+  "box",
+  {
+    children,
+    width,
+    height,
+  },
+  defaultProps
+);
 
 export function Box(...args) {
   const parsedArgs = args[0].children

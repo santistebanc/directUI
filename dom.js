@@ -1,3 +1,4 @@
+import Collection from "./Collection";
 import { Auto } from "./direct";
 import { getDiff } from "./utils";
 
@@ -13,89 +14,116 @@ const deactivate = (comp) => {
   comp.isActive = false;
 };
 
-export function mountToDOM(base, comp) {
+export function mountToDOM(base, comp, renderer = AbsoluteRenderer()) {
   let prevChildren = [];
-
   const inst = comp.isTemplate ? comp.render() : comp;
+  inst.base = base;
 
-  inst.parent = inst.parent ?? "root";
+  const { onMount, autos } = renderer(inst);
 
-  const { type } = inst;
-  const isText = type === "text";
-  const isInput = type === "input";
-
-  inst.el =
-    inst.el ??
-    document.createElement(isText ? "span" : isInput ? "textarea" : "div");
-
+  onMount();
   inst.isActive = true;
 
   if (inst.children) {
     Auto(() => {
       if (!inst.isActive) return;
-
       const { children } = inst;
+      const { dif } = getDiff(prevChildren, children);
 
-      const { added, removed } = getDiff(prevChildren, children);
-
-      removed.forEach((child) => {
-        deactivate(child);
-        child.el.style.opacity = "0";
-        setTimeout(() => {
-          child.el.remove();
-        }, 500);
-      });
-
-      added.forEach((child) => {
-        const newComp = mountToDOM(inst.el, child, inst);
-        newComp.parent = inst;
+      dif.forEach(([child, action]) => {
+        if (action === -1) {
+          deactivate(child);
+          renderer(child).onUnmount();
+        } else if (action === 1) {
+          mountToDOM(inst.el, child);
+        }
       });
 
       prevChildren = children;
     });
   }
 
-  let styles = {};
-  Auto(() => {
-    if (!inst.isActive) return;
-
-    const {
-      x,
-      y,
-      width,
-      height,
-      text,
-      fontFamily,
-      fontSize,
-      lineHeight,
-    } = inst;
-
-    styles = {
-      ...styles,
-      ["opacity"]: `${inst.el.style.opacity}`,
-      ["transform"]: `translate(${x}px,${y}px)`,
-      ["width"]: `${width}px`,
-      ["height"]: `${height}px`,
-    };
-
-    if (isText || isInput) {
-      styles = {
-        ...styles,
-        ["font-family"]: fontFamily,
-        ["font-size"]: `${fontSize}px`,
-        ["line-height"]: `${lineHeight}px`,
-      };
-    }
-
-    inst.el.style.cssText = getStylesString(styles);
-
-    if (text) inst.el.textContent = text;
+  autos.forEach((attr) => {
+    Auto(() => {
+      if (!inst.isActive) return;
+      attr();
+    });
   });
 
-  inst.el.style.opacity = "0";
-  setTimeout(() => (inst.el.style.opacity = "1"), 0);
-
-  base.appendChild(inst.el);
-
   return inst;
+}
+
+export function AbsoluteRenderer() {
+  return (inst) => {
+    const { base, type } = inst;
+
+    const isText = type === "text";
+    const isInput = type === "input";
+    const tag = isText ? "span" : isInput ? "textarea" : "div";
+    const onMount = () => {
+      if (!inst.el) inst.el = document.createElement(tag);
+      if (inst.exitTimeout) clearTimeout(inst.exitTimeout);
+      inst.el.style.opacity = "0";
+      setTimeout(() => (inst.el.style.opacity = "1"), 0);
+      base.appendChild(inst.el);
+    };
+    const onUnmount = () => {
+      inst.el.style.opacity = "0";
+      inst.exitTimeout = setTimeout(() => {
+        inst.el.remove();
+      }, inst.transitionTime || 200);
+    };
+    const autos = [
+      () => {
+        const {
+          x,
+          y,
+          width,
+          height,
+          text,
+          fontFamily,
+          fontSize,
+          lineHeight,
+          style,
+          transitionTime,
+        } = inst;
+
+        let styles = { ...style };
+
+        styles = {
+          ...styles,
+          opacity: `${inst.el.style.opacity}`,
+          transform: `translate(${x}px,${y}px)`,
+          width: `${width}px`,
+          height: `${height}px`,
+          transition: `all ease-in-out ${transitionTime || 200}ms`,
+        };
+
+        if (isText || isInput) {
+          styles = {
+            ...styles,
+            "font-family": fontFamily,
+            "font-size": `${fontSize}px`,
+            "line-height": `${lineHeight}px`,
+          };
+        }
+
+        inst.el.style.cssText = getStylesString(styles);
+
+        if (text) inst.el.textContent = text;
+
+        return styles;
+      },
+    ];
+    return { onUnmount, onMount, autos };
+  };
+}
+
+const styles = Collection();
+
+export function style(obj) {
+  return styles.getOrAdd(obj, (idd) => {
+    console.log("created new style", idd);
+    return obj;
+  });
 }

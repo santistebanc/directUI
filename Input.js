@@ -36,11 +36,16 @@ export const height = Cached((props) => {
   return Math.min(maxHeight, Math.max(textHeight, resHeight));
 });
 
-export const InputComponent = Component("input", defaultProps, {
-  width,
-  height,
-  fontFamily: ({ font }) => font?.call()?.names.fontFamily.en ?? "Courier New",
-});
+export const InputComponent = Component(
+  "input",
+  {
+    width,
+    height,
+    fontFamily: ({ font }) =>
+      font?.call()?.names.fontFamily.en ?? "Courier New",
+  },
+  defaultProps
+);
 
 export function Input(...args) {
   const parsedArgs = args[0].text ? args[0] : { text: args[0], ...args[1] };

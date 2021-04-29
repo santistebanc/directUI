@@ -1,29 +1,10 @@
 import Memo from "./Memo";
-import {
-  defineGetters,
-  getDeterministicKeys,
-  isFunction,
-  mapEntries,
-  gettersToObj,
-} from "./utils";
+import { isFunction, mapEntries } from "./utils";
 
 export let autos = new Set();
 export let trackers = new Set();
 export let context = {};
 export let statePending = null;
-
-export const cache = Memo();
-
-export function Obj(index, id, instantiate) {
-  let keys = [id];
-  if (Array.isArray(id)) keys = id;
-  else if (id instanceof Object) keys = getDeterministicKeys(id);
-
-  const val = cache.get([index, ...keys]);
-  if (val) return val;
-
-  return cache.set([index, ...keys], instantiate([index, ...keys]));
-}
 
 export function Auto(func) {
   const track = () => {
@@ -98,63 +79,29 @@ State.transaction = (func) => {
 
 export function Cached(func, { limit } = {}) {
   const refMemo = Memo({ limit });
-  const valMemo = Memo({ limit });
   const states = new Map();
-  const props = {};
   let cache;
 
   const output = (...args) => {
-    // const lookupByValue = args.length === 1 && args[0] instanceof Object;
+    const stateValues = [...states.keys()].map((state) => state());
 
-    // //lookup cached value by literal value
-    // if (lookupByValue) {
-    //   const hasDefaultProps = args[0].defaultProps;
+    //lookup cached value by reference
+    const directValue = refMemo.get([...args, ...stateValues]);
+    if (typeof directValue !== "undefined") {
+      cache = directValue;
+      return cache;
+    }
 
-    //   const ownProps = hasDefaultProps
-    //     ? Object.fromEntries(
-    //         Object.entries(gettersToObj(args[0])).filter(
-    //           ([k]) => typeof args[0].defaultProps[k] !== "undefined"
-    //         )
-    //       )
-    //     : gettersToObj(args[0]);
+    const onReadState = (obj, value) => {
+      states.set(obj, value);
+    };
 
-    //   const inputKeys = getDeterministicKeys(ownProps);
-    //   const parsedValue = valMemo.get(inputKeys);
-    //   if (typeof parsedValue !== "undefined") {
-    //     cache = parsedValue;
-    //     return cache;
-    //   }
-    //   //inject trackers to props
-    //   const input = [
-    //     defineGetters({}, ownProps, (val, key) => {
-    //       props[key] = val;
-    //       return val;
-    //     }),
-    //   ];
-    //   cache = func(...input);
-    //   const keys = getDeterministicKeys(props);
-    //   valMemo.set(keys, cache);
-    // } else {
-    //   const stateValues = [...states.keys()].map((state) => state());
+    trackers.add(onReadState);
+    cache = func(...args);
+    trackers.delete(onReadState);
 
-    //   //lookup cached value by reference
-    //   const directValue = refMemo.get([...args, ...stateValues]);
-    //   if (typeof directValue !== "undefined") {
-    //     cache = directValue;
-    //     return cache;
-    //   }
-
-    //   const onReadState = (obj, value) => {
-    //     states.set(obj, value);
-    //   };
-
-    //   trackers.add(onReadState);
-      cache = func(...args);
-    //   trackers.delete(onReadState);
-
-    //   const refkeys = [...args, ...[...states.values()]];
-    //   refMemo.set(refkeys, cache);
-    // }
+    const refkeys = [...args, ...[...states.values()]];
+    refMemo.set(refkeys, cache);
 
     return cache;
   };

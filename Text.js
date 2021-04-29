@@ -40,10 +40,10 @@ export const getLines = Cached((props) => {
   const { text, fontSize, font } = props;
   const spaceWidth = getStringWidth(" ", fontSize, font);
   const availableWidth = getMaxWidth(props);
+
   const words = getWords(text, fontSize, font);
   const totalWidth = words[words.length - 1].widthSoFar;
   const aproxCutPoint = Math.ceil((words.length * availableWidth) / totalWidth);
-
   let lines = 0;
   let pointerIdx = 0;
   let usedWidth = 0;
@@ -54,14 +54,15 @@ export const getLines = Cached((props) => {
       pointerIdx + aproxCutPoint
     );
     if (pointerIdx < words.length) {
-      usedWidth = words[pointerIdx][2];
+      usedWidth = words[pointerIdx].widthSoFar;
     }
   } while (pointerIdx < words.length - 1);
 
   function findCutIndex(limitWidth, idx, discarded) {
-    if (limitWidth > words[words.length - 1][2]) return words.length - 1; //the whole text can fit
+    if (limitWidth > words[words.length - 1].widthSoFar)
+      return words.length - 1; //the whole text can fit
     if (idx <= 0) return 0; //only one word fits
-    if (idx > words.length - 1 || words[idx][2] > limitWidth) {
+    if (idx > words.length - 1 || words[idx].widthSoFar > limitWidth) {
       if (discarded === "down") return idx - 1; //found it
       return findCutIndex(limitWidth, idx - 1, "up");
     } else {
@@ -91,11 +92,15 @@ export const height = Cached((props) => {
   return linesCount * lineHeight;
 });
 
-export const TextComponent = Component("text", defaultProps, {
-  width,
-  height,
-  fontFamily: ({ font }) => font?.names.fontFamily.en ?? "Courier New",
-});
+export const TextComponent = Component(
+  "text",
+  {
+    width,
+    height,
+    fontFamily: ({ font }) => font?.names.fontFamily.en ?? "Courier New",
+  },
+  defaultProps
+);
 
 export function Text(...args) {
   const parsedArgs = args[0].text ? args[0] : { text: args[0], ...args[1] };

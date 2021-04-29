@@ -31,12 +31,6 @@ export function defineGetters(target, obj, func) {
   );
 }
 
-export function getDeterministicKeys(obj) {
-  return Object.entries(obj)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([k, v]) => v);
-}
-
 export function objectIsEqual(a, b) {
   return !Object.values(a).some((x) => !Object.values(b).includes(x));
 }
@@ -57,6 +51,13 @@ export function gettersToObj(obj) {
   ]);
 }
 
+export function compsAreSame(a, b) {
+  return (
+    a === b ||
+    (typeof a.id !== "undefined" && a.id === b.id && a.type === b.type)
+  );
+}
+
 export function getDiff(prev, next) {
   const pool = [...next];
   const dif = [];
@@ -64,15 +65,16 @@ export function getDiff(prev, next) {
   const removed = [];
   const kept = [];
 
-  prev.forEach((it) => {
-    const idx = pool.indexOf(it);
+  prev.forEach((prevIt) => {
+    const idx = pool.findIndex((nxt) => compsAreSame(nxt, prevIt));
+    const it = pool[idx];
     if (idx > -1) {
       dif.push([it, 0]);
       kept.push(it);
       pool.splice(idx, 1);
     } else {
-      dif.push([it, -1]);
-      removed.push(it);
+      dif.push([prevIt, -1]);
+      removed.push(prevIt);
     }
   });
   pool.forEach((it) => {
@@ -82,6 +84,6 @@ export function getDiff(prev, next) {
   return { dif, added, kept, removed };
 }
 
-export function indicesOf(arr, value) {
-  return arr.map((e, i) => (e === value ? i : "")).filter(String);
+export function serializeProps(props) {
+  return mapEntries(props, ([k, v]) => [k, isFunction(v) ? v.toString() : v]);
 }

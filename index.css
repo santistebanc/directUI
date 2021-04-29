@@ -27,7 +27,6 @@ body {
 }
 
 #app * {
-  transition: all ease-in-out 200ms;
   overflow: hidden;
   padding: 0;
   margin: 0;
