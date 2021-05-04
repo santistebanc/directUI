@@ -1,62 +1,29 @@
-import Collection from "./Collection";
-import { defineGetters, isFunction, mapEntries, serializeProps } from "./utils";
-
-export const components = Collection();
+import { clone, defineGetters, isFunction } from "./utils";
 
 export function Component(type, resolvers, defaultProps) {
   return (atts = {}) => {
     function Template(attributes = {}) {
-      Object.assign(atts, attributes);
-      Template.attributes = { ...atts };
-      Template.id = atts.id;
-      return Template;
-    }
-    Template.type = type;
-    Template.defaultProps = defaultProps;
-    Template.resolvers = resolvers;
-    Template.isTemplate = true;
-    Template.render = (renderProps = {}) => {
-      const attributes = { ...atts };
+      const passedProps = { ...atts };
+      if (!attributes.parentProps) Object.assign(passedProps, attributes);
+      const inst = (atts = {}) => Template({ ...attributes, ...atts });
+      inst.attributes = { ...attributes };
+      inst.passedProps = { ...passedProps };
+      inst.type = type;
+      inst.id = attributes.id;
+      inst.defaultProps = defaultProps;
+      inst.resolvers = resolvers;
 
       const mergedProps = {
-        parent: () => null,
-        self: () => null,
         ...defaultProps,
-        ...renderProps,
         ...attributes,
-        template: Template,
-        type,
-        defaultProps,
       };
 
-      const keys = mergedProps.id
-        ? {
-            type,
-            id: mergedProps.id,
-            parent: mergedProps.parent(),
-          }
-        : {
-            type,
-            parent: mergedProps.parent(),
-            ...serializeProps(attributes),
-          };
-
-      const inst = mergedProps.parent
-        ? components.getOrAdd(keys, (idd) => {
-            console.log("created new component", idd);
-            return {};
-          })
-        : {};
-
-      const props = defineGetters(
-        {},
-        { ...mergedProps, self: () => inst },
-        (prop, key) =>
-          typeof defaultProps[key] === "undefined" || key === "self"
-            ? prop
-            : isFunction(prop)
-            ? prop(props)
-            : prop
+      const props = defineGetters({}, mergedProps, (prop, key) =>
+        typeof defaultProps[key] === "undefined"
+          ? prop
+          : isFunction(prop)
+          ? prop(props)
+          : prop
       );
 
       //output: merge props with resolvers
@@ -66,8 +33,7 @@ export function Component(type, resolvers, defaultProps) {
       defineGetters(inst, resolvers, (func) => func(props));
 
       return inst;
-    };
-
+    }
     return Template(atts);
   };
 }

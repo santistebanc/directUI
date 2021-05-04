@@ -11,7 +11,7 @@ opentype.load("fonts/OpenSans-Regular.ttf").then((res) => font.set(res));
 
 const title = Text(({ page }) => "hello world " + page(), { font });
 
-const content = Text(() => "this is the content of the page", { font });
+const content = Text("this is the content of the page", { font });
 
 // const input = Input("test here", { font });
 
@@ -23,9 +23,11 @@ const container = Box(({ page }) =>
           font,
           style: style({ color: "purple", "font-weight": "bold" }),
         }),
-        Text(() => "you should not be here"),
+        Text("you should not be here", { madeup: { a: 6 } }),
       ]
     : [
+        Text("you should not be here"),
+        title({ page }),
         Text("testoooooooooo", {
           id: "waka",
           font,
@@ -58,12 +60,12 @@ const app = mountToDOM(base, main);
 console.log(app);
 
 setInterval(() => {
-  app.page.set((val) => val + 1);
+  main.page.set((val) => val + 1);
   console.log(app);
 }, 5000);
 
 window.onresize = () => {
-  app.setState({
+  main.setState({
     screenWidth: window.innerWidth,
     screenHeight: window.innerHeight,
   });

@@ -1,6 +1,6 @@
 import Collection from "./Collection";
 import { Auto } from "./direct";
-import { getDiff } from "./utils";
+import { getDiff, mapEntries, serializeProps } from "./utils";
 
 function getStylesString(styles) {
   return Object.entries(styles).reduce(
@@ -9,114 +9,155 @@ function getStylesString(styles) {
   );
 }
 
-const deactivate = (comp) => {
-  comp.children?.forEach((ch) => deactivate(ch));
-  comp.isActive = false;
+const deactivate = (node) => {
+  node.children?.forEach((ch) => deactivate(ch));
+  node.isActive = false;
 };
 
-export function mountToDOM(base, comp, renderer = AbsoluteRenderer()) {
-  let prevChildren = [];
-  const inst = comp.isTemplate ? comp.render() : comp;
-  inst.base = base;
+export function mountToDOM(parentEl, rootComponent) {
+  const root = {
+    parent: null,
+    comp: rootComponent,
+    parentEl,
+    active: true,
+    children: [],
+  };
+  root.el = mount(parentEl, root);
+  root.render = render(root);
+  if (rootComponent.children) root.watcher = watchChildren(root);
 
-  const { onMount, autos } = renderer(inst);
+  function watchChildren(parentNode) {
+    const prevNodes = new Set();
+    const nodes = Collection();
+    return Auto(() => {
+      const { children } = parentNode.comp;
+      const getKeys = (comp) =>
+        comp.id
+          ? { type: comp.type, id: comp.id }
+          : {
+              ...serializeProps(comp.passedProps, comp.defaultProps),
+              type: comp.type,
+            };
 
-  onMount();
-  inst.isActive = true;
+      const sameComps = (c1, c2) => {
+        const k1 = getKeys(c1);
+        const k2 = getKeys(c2);
+        return (
+          Object.keys(k1).length === Object.keys(k2).length &&
+          !Object.entries(k1).some(([k, v]) => k2[k] !== v)
+        );
+      };
 
-  if (inst.children) {
-    Auto(() => {
-      if (!inst.isActive) return;
-      const { children } = inst;
-      const { dif } = getDiff(prevChildren, children);
+      const removedNodes = [...prevNodes.values()].filter(
+        (n) => n.active && !children.some((ch) => sameComps(ch, n.comp))
+      );
 
-      dif.forEach(([child, action]) => {
-        if (action === -1) {
-          deactivate(child);
-          renderer(child).onUnmount();
-        } else if (action === 1) {
-          mountToDOM(inst.el, child);
+      removedNodes.forEach((toBeRemovedNode) => {
+        deactivate(toBeRemovedNode);
+        function deactivate(node) {
+          node.children?.forEach((ch) => deactivate(ch));
+          node.active = false;
+          node.render?.cleanup();
+          node.watcher?.cleanup();
+          node.render = null;
+          node.watcher = null;
         }
+        unmount(toBeRemovedNode);
       });
 
-      prevChildren = children;
+      prevNodes.clear();
+
+      children.forEach((child) => {
+        const keys = getKeys(child);
+
+        console.log("keeeeeys", keys);
+
+        const node = nodes.getOrAdd(keys, () => {
+          const toBeAddedNode = {
+            parent: parentNode,
+            parentEl: parentNode.el,
+            children: [],
+          };
+          console.log("created component", toBeAddedNode);
+          parentNode.children.push(toBeAddedNode);
+          return toBeAddedNode;
+        });
+
+        node.comp = child;
+        if (!node.active) node.el = mount(parentNode.el, node);
+
+        node.active = true;
+
+        if (!node.render) node.render = render(node);
+        if (child.children && !node.watcher) node.watcher = watchChildren(node);
+
+        prevNodes.add(node);
+      });
     });
   }
+  function render(node) {
+    return Auto(() => {
+      const isText = node.comp.type === "text";
+      const isInput = node.comp.type === "input";
 
-  autos.forEach((attr) => {
-    Auto(() => {
-      if (!inst.isActive) return;
-      attr();
-    });
-  });
+      const {
+        x,
+        y,
+        width,
+        height,
+        text,
+        fontFamily,
+        fontSize,
+        lineHeight,
+        style,
+        transitionTime,
+      } = node.comp;
 
-  return inst;
-}
+      let styles = { ...style };
 
-export function AbsoluteRenderer() {
-  return (inst) => {
-    const { base, type } = inst;
+      styles = {
+        ...styles,
+        opacity: `${node.el.style.opacity}`,
+        transform: `translate(${x}px,${y}px)`,
+        width: `${width}px`,
+        height: `${height}px`,
+        transition: `all ease-in-out ${transitionTime || 200}ms`,
+      };
 
+      if (isText || isInput) {
+        styles = {
+          ...styles,
+          "font-family": fontFamily,
+          "font-size": `${fontSize}px`,
+          "line-height": `${lineHeight}px`,
+        };
+      }
+
+      node.el.style.cssText = getStylesString(styles);
+
+      if (text) node.el.textContent = text;
+    }, node.comp.text);
+  }
+  function mount(parentEl, node) {
+    const { type } = node.comp;
     const isText = type === "text";
     const isInput = type === "input";
     const tag = isText ? "span" : isInput ? "textarea" : "div";
-    const onMount = () => {
-      if (!inst.el) inst.el = document.createElement(tag);
-      if (inst.exitTimeout) clearTimeout(inst.exitTimeout);
-      inst.el.style.opacity = "0";
-      setTimeout(() => (inst.el.style.opacity = "1"), 0);
-      base.appendChild(inst.el);
-    };
-    const onUnmount = () => {
-      inst.el.style.opacity = "0";
-      inst.exitTimeout = setTimeout(() => {
-        inst.el.remove();
-      }, inst.transitionTime || 200);
-    };
-    const autos = [
-      () => {
-        const {
-          x,
-          y,
-          width,
-          height,
-          text,
-          fontFamily,
-          fontSize,
-          lineHeight,
-          style,
-          transitionTime,
-        } = inst;
+    const el = document.createElement(tag);
+    if (node.exitTimeout) clearTimeout(node.exitTimeout);
+    el.style.opacity = "0";
+    setTimeout(() => (el.style.opacity = "1"), 0);
+    parentEl.appendChild(el);
+    return el;
+  }
+  function unmount(node) {
+    node.el.style.opacity = "0";
+    node.exitTimeout = setTimeout(() => {
+      node.el.remove();
+    }, node.transitionTime || 200);
+  }
 
-        let styles = { ...style };
-
-        styles = {
-          ...styles,
-          opacity: `${inst.el.style.opacity}`,
-          transform: `translate(${x}px,${y}px)`,
-          width: `${width}px`,
-          height: `${height}px`,
-          transition: `all ease-in-out ${transitionTime || 200}ms`,
-        };
-
-        if (isText || isInput) {
-          styles = {
-            ...styles,
-            "font-family": fontFamily,
-            "font-size": `${fontSize}px`,
-            "line-height": `${lineHeight}px`,
-          };
-        }
-
-        inst.el.style.cssText = getStylesString(styles);
-
-        if (text) inst.el.textContent = text;
-
-        return styles;
-      },
-    ];
-    return { onUnmount, onMount, autos };
-  };
+  return root;
 }
 
 const styles = Collection();

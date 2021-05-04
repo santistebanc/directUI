@@ -69,8 +69,8 @@ export function getDiff(prev, next) {
     const idx = pool.findIndex((nxt) => compsAreSame(nxt, prevIt));
     const it = pool[idx];
     if (idx > -1) {
-      dif.push([it, 0]);
-      kept.push(it);
+      dif.push([prevIt, 0]);
+      kept.push(prevIt);
       pool.splice(idx, 1);
     } else {
       dif.push([prevIt, -1]);
@@ -84,6 +84,9 @@ export function getDiff(prev, next) {
   return { dif, added, kept, removed };
 }
 
-export function serializeProps(props) {
-  return mapEntries(props, ([k, v]) => [k, isFunction(v) ? v.toString() : v]);
+export function serializeProps(props, defaultProps) {
+  return mapEntries(props, ([k, v]) => [
+    k,
+    typeof defaultProps[k] !== "undefined" && isFunction(v) ? v.toString() : v,
+  ]);
 }

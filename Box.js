@@ -68,9 +68,10 @@ export const getDimensions = Cached((index, props) => {
   const propsToPass = {
     maxHeight: availableHeight,
     maxWidth: availableWidth,
+    static: true,
   };
 
-  const renderedChild = children[index].render(propsToPass);
+  const renderedChild = children[index](propsToPass);
   const calculatedWidth = renderedChild.width;
   const calculatedHeight = renderedChild.height;
 
@@ -118,7 +119,7 @@ export const getDimensions = Cached((index, props) => {
 });
 
 export const children = Cached((props) => {
-  const { children, template, self } = props;
+  const { children } = props;
   const propsCopy = gettersToObj(props);
 
   return children.map((child, idx) => {
@@ -137,11 +138,9 @@ export const children = Cached((props) => {
       x: dimensions("itemX"),
       y: dimensions("itemY"),
       parentProps: propsCopy,
-      parentTemplate: template,
-      parent: self,
     };
 
-    return child.render(propsToPassDown);
+    return child(propsToPassDown);
   });
 });
 

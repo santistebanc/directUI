@@ -6,19 +6,29 @@ export let trackers = new Set();
 export let context = {};
 export let statePending = null;
 
-export function Auto(func) {
-  const track = () => {
+export function Auto(func, nm) {
+  const track = (who) => {
     autos.add(track);
-    func();
+    func(who);
     autos.delete(track);
   };
-  track();
+  track.nm = nm;
+  track.disposers = new Map();
+  track.cleanup = () => {
+    [...track.disposers.values()].forEach((disp) => disp());
+    track.disposers.clear();
+  };
+  track({ value: "????????????" });
+  return track;
 }
 
 export function State(initialValue) {
   const get = () => {
     [...trackers].forEach((func) => func(get, get.value));
-    [...autos].forEach((func) => get.observers.add(func));
+    [...autos].forEach((func) => {
+      func.disposers.set(get, () => get.observers.delete(func));
+      get.observers.add(func);
+    });
     return get.value;
   };
 
@@ -27,9 +37,12 @@ export function State(initialValue) {
   get.observers = new Set();
   get.get = get;
   get.react = () => {
-    [...get.observers].forEach((obs) => {
-      get.observers.delete(obs);
-      obs();
+    const obsList = [...get.observers];
+    obsList.forEach((obs) => {
+      if (get.observers.has(obs)) {
+        get.observers.delete(obs);
+        obs(get);
+      }
     });
   };
   get.set = (newVal) => {
