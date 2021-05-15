@@ -1,6 +1,7 @@
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
 import { Cached } from "./direct";
+import { mapEntries } from "./utils";
 
 export const defaultProps = {
   text: "",
@@ -14,23 +15,23 @@ export const defaultProps = {
 };
 
 export const getCharWidth = Cached(
-  (char, fontSize, font) =>
+  ({ char, fontSize, font }) =>
     font?.getAdvanceWidth(char, fontSize) || (fontSize * 1229) / 2048
 );
 
-export const getStringWidth = Cached((text, fontSize, font) =>
+export const getStringWidth = Cached(({ text, fontSize, font }) =>
   font
     ? text
         .split("")
-        .reduce((sum, char) => sum + getCharWidth(char, fontSize, font), 0)
+        .reduce((sum, char) => sum + getCharWidth({ char, fontSize, font }), 0)
     : (text.length * fontSize * 1229) / 2048
 );
 
-export const getWords = Cached((text, fontSize, font) => {
-  const spaceWidth = getStringWidth(" ", fontSize, font);
+export const getWords = Cached(({ text, fontSize, font }) => {
+  const spaceWidth = getStringWidth({ text: " ", fontSize, font });
   let widthSoFar = 0;
   return text.split(" ").map((wordText, i) => {
-    const wordWidth = getStringWidth(wordText, fontSize, font);
+    const wordWidth = getStringWidth({ text: wordText, fontSize, font });
     widthSoFar += wordWidth + (i > 0 ? spaceWidth : 0);
     return { wordText, wordWidth, widthSoFar };
   });
@@ -38,10 +39,10 @@ export const getWords = Cached((text, fontSize, font) => {
 
 export const getLines = Cached((props) => {
   const { text, fontSize, font } = props;
-  const spaceWidth = getStringWidth(" ", fontSize, font);
+  const spaceWidth = getStringWidth({ text: " ", fontSize, font });
   const availableWidth = getMaxWidth(props);
 
-  const words = getWords(text, fontSize, font);
+  const words = getWords({ text, fontSize, font });
   const totalWidth = words[words.length - 1].widthSoFar;
   const aproxCutPoint = Math.ceil((words.length * availableWidth) / totalWidth);
   let lines = 0;
@@ -74,17 +75,19 @@ export const getLines = Cached((props) => {
   return lines;
 });
 
-export const getMaxWidth = Cached((props) => {
-  const { maxWidth, text, fontSize, font } = props;
-  const words = getWords(text, fontSize, font);
+export const getMaxWidth = Cached(({ maxWidth, text, fontSize, font }) => {
+  const words = getWords({ text, fontSize, font });
   return Math.min(maxWidth, words[words.length - 1].widthSoFar);
 });
 
-export const width = Cached((props) => {
-  const { maxWidth } = props;
-  if (getLines(props) > 1) return maxWidth;
-  return getMaxWidth(props);
-});
+export const width = Cached(
+  (props) => {
+    const { maxWidth } = props;
+    if (getLines(props) > 1) return maxWidth;
+    return getMaxWidth(props);
+  },
+  { name: "textWIIIIDTH" }
+);
 
 export const height = Cached((props) => {
   const { lineHeight } = props;
@@ -92,15 +95,16 @@ export const height = Cached((props) => {
   return linesCount * lineHeight;
 });
 
-export const TextComponent = Component(
-  "text",
-  {
-    width,
-    height,
-    fontFamily: ({ font }) => font?.names.fontFamily.en ?? "Courier New",
-  },
-  defaultProps
-);
+export const TextComponent = Component((atts) => {
+  const props = { ...defaultProps, ...atts };
+  return {
+    ...props,
+    width: width(props),
+    height: height(props),
+    fontFamily: props.font?.names.fontFamily.en ?? "Courier New",
+    type: "text",
+  };
+});
 
 export function Text(...args) {
   const parsedArgs = args[0].text ? args[0] : { text: args[0], ...args[1] };

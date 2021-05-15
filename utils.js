@@ -23,6 +23,7 @@ export function defineGetters(target, obj, func) {
       key,
       {
         configurable: true,
+        enumerable: true,
         get() {
           return func(val, key, obj);
         },
@@ -84,9 +85,11 @@ export function getDiff(prev, next) {
   return { dif, added, kept, removed };
 }
 
-export function serializeProps(props, defaultProps) {
-  return mapEntries(props, ([k, v]) => [
-    k,
-    typeof defaultProps[k] !== "undefined" && isFunction(v) ? v.toString() : v,
-  ]);
+export function serializeProps(props) {
+  return mapEntries(props, ([k, v]) => [k, isFunction(v) ? v.toString() : v]);
+}
+
+export function ensureArray(target) {
+  if (Array.isArray(target)) return target;
+  return [target];
 }

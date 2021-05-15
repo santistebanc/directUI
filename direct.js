@@ -1,5 +1,5 @@
 import Memo from "./Memo";
-import { isFunction, mapEntries } from "./utils";
+import { defineGetters, isFunction, mapEntries } from "./utils";
 
 export let autos = new Set();
 export let trackers = new Set();
@@ -18,7 +18,7 @@ export function Auto(func, nm) {
     [...track.disposers.values()].forEach((disp) => disp());
     track.disposers.clear();
   };
-  track({ value: "????????????" });
+  track();
   return track;
 }
 
@@ -90,31 +90,36 @@ State.transaction = (func) => {
   return output;
 };
 
-export function Cached(func, { limit } = {}) {
-  const refMemo = Memo({ limit });
-  const states = new Map();
+export function Cached(func, { limit, name } = {}) {
+  const memo = Memo({ limit });
+  const propKeys = new Set();
   let cache;
+  let lastProps;
 
-  const output = (...args) => {
-    const stateValues = [...states.keys()].map((state) => state());
+  const output = (props) => {
+    if (lastProps === props) return cache;
+    lastProps = props;
 
-    //lookup cached value by reference
-    const directValue = refMemo.get([...args, ...stateValues]);
-    if (typeof directValue !== "undefined") {
-      cache = directValue;
-      return cache;
+    const propValues = [...propKeys.keys()].map((key) => props[key]);
+
+    if (propKeys.size) {
+      const directValue = memo.get(propValues);
+      if (typeof directValue !== "undefined") {
+        cache = directValue;
+        return cache;
+      }
     }
 
-    const onReadState = (obj, value) => {
-      states.set(obj, value);
-    };
+    const trackingProps = defineGetters({}, props, (prop, key) => {
+      propKeys.add(key);
+      return prop;
+    });
 
-    trackers.add(onReadState);
-    cache = func(...args);
-    trackers.delete(onReadState);
+    cache = func(trackingProps);
 
-    const refkeys = [...args, ...[...states.values()]];
-    refMemo.set(refkeys, cache);
+    const keys = [...propKeys.keys()].map((k) => props[k]);
+
+    memo.set(keys, cache);
 
     return cache;
   };

@@ -1,12 +1,7 @@
+import Collection from "./Collection";
 import { Component } from "./Component";
 import { Cached } from "./direct";
-import {
-  clone,
-  compsAreSame,
-  defineGetters,
-  gettersToObj,
-  isFunction,
-} from "./utils";
+import { ensureArray, isFunction } from "./utils";
 
 export const defaultProps = {
   children: [],
@@ -24,120 +19,116 @@ export const defaultProps = {
   y: 0,
 };
 
-export const getDimensions = Cached((index, props) => {
-  const {
-    children,
-    width,
-    height,
-    maxWidth,
-    maxHeight,
-    paddingLeft,
-    paddingTop,
-    paddingRight,
-    paddingBottom,
-    gapHorizontal,
-    gapVertical,
-  } = props;
-
-  let startX = paddingLeft;
-  let startY = paddingTop;
-  let currentHeight = 0;
-  let totalWidth = 0;
-  let totalHeight = 0;
-
-  if (index > 0) {
+export const getDimensions = Cached(
+  (props) => {
     const {
-      itemX,
-      itemY,
-      itemWidth,
-      singleLineHeight,
-      containerWidth,
-      containerHeight,
-    } = getDimensions(index - 1, props);
+      index,
+      children,
+      width,
+      height,
+      maxWidth,
+      maxHeight,
+      paddingLeft,
+      paddingTop,
+      paddingRight,
+      paddingBottom,
+      gapHorizontal,
+      gapVertical,
+    } = props;
 
-    startX = itemX + itemWidth + gapHorizontal;
-    startY = itemY;
-    currentHeight = singleLineHeight;
-    totalWidth = containerWidth;
-    totalHeight = containerHeight - paddingBottom - paddingTop;
-  }
+    let startX = paddingLeft;
+    let startY = paddingTop;
+    let currentHeight = 0;
+    let totalWidth = 0;
+    let totalHeight = 0;
 
-  const availableWidth = (width ?? maxWidth) - paddingLeft - paddingRight;
-  const availableHeight = (height ?? maxHeight) - paddingTop - paddingBottom;
+    if (index > 0) {
+      const {
+        itemX,
+        itemY,
+        itemWidth,
+        singleLineHeight,
+        containerWidth,
+        containerHeight,
+      } = getDimensions({ ...props, index: index - 1 });
 
-  const propsToPass = {
-    maxHeight: availableHeight,
-    maxWidth: availableWidth,
-    static: true,
-  };
+      startX = itemX + itemWidth + gapHorizontal;
+      startY = itemY;
+      currentHeight = singleLineHeight;
+      totalWidth = containerWidth;
+      totalHeight = containerHeight - paddingBottom - paddingTop;
+    }
 
-  const renderedChild = children[index](propsToPass);
-  const calculatedWidth = renderedChild.width;
-  const calculatedHeight = renderedChild.height;
+    const availableWidth = (width ?? maxWidth) - paddingLeft - paddingRight;
+    const availableHeight = (height ?? maxHeight) - paddingTop - paddingBottom;
 
-  if (index === 0 || startX + calculatedWidth <= availableWidth + paddingLeft) {
-    return {
-      itemX: startX,
-      itemY: startY,
-      itemWidth: calculatedWidth,
-      itemHeight: calculatedHeight,
-      singleLineHeight: Math.max(currentHeight, calculatedHeight),
-      containerWidth: Math.max(
-        totalWidth,
-        startX + calculatedWidth + paddingRight
-      ),
-      containerHeight: Math.max(
-        totalHeight,
-        totalHeight -
-          currentHeight +
-          Math.max(currentHeight, calculatedHeight) +
-          paddingTop +
-          paddingBottom
-      ),
+    const propsToPass = {
+      maxHeight: availableHeight,
+      maxWidth: availableWidth,
     };
-  } else {
-    return {
-      itemX: paddingLeft,
-      itemY: startY + currentHeight + gapVertical,
-      itemWidth: calculatedWidth,
-      itemHeight: calculatedHeight,
-      singleLineHeight: calculatedHeight,
-      containerWidth: Math.max(
-        totalWidth,
-        paddingLeft + availableWidth + paddingRight
-      ),
-      containerHeight: Math.max(
-        totalHeight,
-        totalHeight +
-          calculatedHeight +
-          gapVertical +
-          paddingTop +
-          paddingBottom
-      ),
-    };
-  }
-});
+
+    const renderedChild = children[index](propsToPass);
+    const calculatedWidth = renderedChild.width;
+    const calculatedHeight = renderedChild.height;
+
+    if (
+      index === 0 ||
+      startX + calculatedWidth <= availableWidth + paddingLeft
+    ) {
+      return {
+        itemX: startX,
+        itemY: startY,
+        itemWidth: calculatedWidth,
+        itemHeight: calculatedHeight,
+        singleLineHeight: Math.max(currentHeight, calculatedHeight),
+        containerWidth: Math.max(
+          totalWidth,
+          startX + calculatedWidth + paddingRight
+        ),
+        containerHeight: Math.max(
+          totalHeight,
+          totalHeight -
+            currentHeight +
+            Math.max(currentHeight, calculatedHeight) +
+            paddingTop +
+            paddingBottom
+        ),
+      };
+    } else {
+      return {
+        itemX: paddingLeft,
+        itemY: startY + currentHeight + gapVertical,
+        itemWidth: calculatedWidth,
+        itemHeight: calculatedHeight,
+        singleLineHeight: calculatedHeight,
+        containerWidth: Math.max(
+          totalWidth,
+          paddingLeft + availableWidth + paddingRight
+        ),
+        containerHeight: Math.max(
+          totalHeight,
+          totalHeight +
+            calculatedHeight +
+            gapVertical +
+            paddingTop +
+            paddingBottom
+        ),
+      };
+    }
+  },
+  { name: "dims" }
+);
 
 export const children = Cached((props) => {
   const { children } = props;
-  const propsCopy = gettersToObj(props);
-
-  return children.map((child, idx) => {
-    const dimensions = (prop) => ({ parentProps }) => {
-      const index = props.children.findIndex((ch) => compsAreSame(ch, child));
-      if (index > -1) {
-        return getDimensions(index, props)[prop];
-      } else {
-        return getDimensions(idx, parentProps)[prop];
-      }
-    };
+  return children.map((child, index) => {
+    const dimensions = getDimensions({ ...props, index });
 
     const propsToPassDown = {
-      maxWidth: dimensions("itemWidth"),
-      maxHeight: dimensions("itemHeight"),
-      x: dimensions("itemX"),
-      y: dimensions("itemY"),
-      parentProps: propsCopy,
+      maxWidth: dimensions.itemWidth,
+      maxHeight: dimensions.itemHeight,
+      x: dimensions.itemX,
+      y: dimensions.itemY,
     };
 
     return child(propsToPassDown);
@@ -149,7 +140,7 @@ export const width = Cached((props) => {
   return (
     width ??
     (children.length
-      ? getDimensions(children.length - 1, props).containerWidth
+      ? getDimensions({ ...props, index: children.length - 1 }).containerWidth
       : 0)
   );
 });
@@ -159,30 +150,36 @@ export const height = Cached((props) => {
   return (
     height ??
     (children.length
-      ? getDimensions(children.length - 1, props).containerHeight
+      ? getDimensions({ ...props, index: children.length - 1 }).containerHeight
       : 0)
   );
 });
 
-export const BoxComponent = Component(
-  "box",
-  {
-    children,
-    width,
-    height,
-  },
-  defaultProps
-);
+export const BoxComponent = Component((atts) => {
+  const props = { ...defaultProps, ...atts };
+  return {
+    ...props,
+    width: width(props),
+    height: height(props),
+    children: children(props),
+    type: "box",
+  };
+});
+
+const childrenCollection = Collection();
+
+export function ch(obj) {
+  return childrenCollection.getOrAdd(obj, (idd) => {
+    console.log("created new children collection", idd);
+    return obj;
+  });
+}
 
 export function Box(...args) {
   const parsedArgs = args[0].children
-    ? args[0]
+    ? ch(ensureArray(args[0]))
     : {
-        children: isFunction(args[0])
-          ? args[0]
-          : Array.isArray(args[0])
-          ? args[0]
-          : [args[0]],
+        children: ch(ensureArray(args[0])),
         ...args[1],
       };
   return BoxComponent(parsedArgs);

@@ -1,6 +1,6 @@
 import Collection from "./Collection";
 import { Auto } from "./direct";
-import { getDiff, mapEntries, serializeProps } from "./utils";
+import { ensureArray, serializeProps } from "./utils";
 
 function getStylesString(styles) {
   return Object.entries(styles).reduce(
@@ -9,155 +9,126 @@ function getStylesString(styles) {
   );
 }
 
-const deactivate = (node) => {
-  node.children?.forEach((ch) => deactivate(ch));
-  node.isActive = false;
+const getKeys = (comp) =>
+  comp.id
+    ? { type: comp.type, id: comp.id }
+    : {
+        ...serializeProps(comp.props),
+        type: comp.type,
+      };
+
+const sameComps = (c1, c2) => {
+  const k1 = getKeys(c1);
+  const k2 = getKeys(c2);
+  return (
+    Object.keys(k1).length === Object.keys(k2).length &&
+    !Object.entries(k1).some(([k, v]) => k2[k] !== v)
+  );
 };
 
-export function mountToDOM(parentEl, rootComponent) {
-  const root = {
-    parent: null,
-    comp: rootComponent,
-    parentEl,
-    active: true,
-    children: [],
-  };
-  root.el = mount(parentEl, root);
-  root.render = render(root);
-  if (rootComponent.children) root.watcher = watchChildren(root);
+export function mountToDOM(base, renderFunc) {
+  const nodes = new WeakMap();
+  function mountChildren(base, comps) {
+    console.log("mounting");
+    const mountedNodes = Array.from(base.children).map((el) => nodes.get(el));
 
-  function watchChildren(parentNode) {
-    const prevNodes = new Set();
-    const nodes = Collection();
-    return Auto(() => {
-      const { children } = parentNode.comp;
-      const getKeys = (comp) =>
-        comp.id
-          ? { type: comp.type, id: comp.id }
-          : {
-              ...serializeProps(comp.passedProps, comp.defaultProps),
-              type: comp.type,
-            };
+    const nodesToUnmount = mountedNodes.filter(
+      (n) => n.active && !comps.some((ch) => sameComps(ch, n.comp))
+    );
 
-      const sameComps = (c1, c2) => {
-        const k1 = getKeys(c1);
-        const k2 = getKeys(c2);
-        return (
-          Object.keys(k1).length === Object.keys(k2).length &&
-          !Object.entries(k1).some(([k, v]) => k2[k] !== v)
-        );
-      };
+    nodesToUnmount.forEach((n) => {
+      const node = nodes.get(n.el);
+      node.active = false;
+      unmount(n.el);
+    });
 
-      const removedNodes = [...prevNodes.values()].filter(
-        (n) => n.active && !children.some((ch) => sameComps(ch, n.comp))
-      );
-
-      removedNodes.forEach((toBeRemovedNode) => {
-        deactivate(toBeRemovedNode);
-        function deactivate(node) {
-          node.children?.forEach((ch) => deactivate(ch));
-          node.active = false;
-          node.render?.cleanup();
-          node.watcher?.cleanup();
-          node.render = null;
-          node.watcher = null;
-        }
-        unmount(toBeRemovedNode);
-      });
-
-      prevNodes.clear();
-
-      children.forEach((child) => {
-        const keys = getKeys(child);
-
-        console.log("keeeeeys", keys);
-
-        const node = nodes.getOrAdd(keys, () => {
-          const toBeAddedNode = {
-            parent: parentNode,
-            parentEl: parentNode.el,
-            children: [],
-          };
-          console.log("created component", toBeAddedNode);
-          parentNode.children.push(toBeAddedNode);
-          return toBeAddedNode;
-        });
-
-        node.comp = child;
-        if (!node.active) node.el = mount(parentNode.el, node);
-
-        node.active = true;
-
-        if (!node.render) node.render = render(node);
-        if (child.children && !node.watcher) node.watcher = watchChildren(node);
-
-        prevNodes.add(node);
-      });
+    comps.forEach((comp) => {
+      const mountedNode = mountedNodes.find((n) => sameComps(comp, n.comp));
+      const el = mountedNode?.el ?? create(comp);
+      nodes
+        .set(el, {
+          el,
+          comp,
+          active: true,
+        })
+        .get(el);
+      if (comp.children) mountChildren(el, comp.children);
+      render(el);
+      if (!mountedNode) mount(base, el);
     });
   }
-  function render(node) {
-    return Auto(() => {
-      const isText = node.comp.type === "text";
-      const isInput = node.comp.type === "input";
 
-      const {
-        x,
-        y,
-        width,
-        height,
-        text,
-        fontFamily,
-        fontSize,
-        lineHeight,
-        style,
-        transitionTime,
-      } = node.comp;
+  Auto(() => {
+    const comps = ensureArray(renderFunc());
+    mountChildren(base, comps);
+  });
 
-      let styles = { ...style };
+  function render(el) {
+    const node = nodes.get(el);
+    const {
+      type,
+      x,
+      y,
+      width,
+      height,
+      text,
+      fontFamily,
+      fontSize,
+      lineHeight,
+      style,
+      transitionTime,
+    } = node.comp;
+    const isText = type === "text";
+    const isInput = type === "input";
 
+    let styles = { ...style };
+
+    styles = {
+      ...styles,
+      opacity: `${el.style.opacity}`,
+      transform: `translate(${x}px,${y}px)`,
+      width: `${width}px`,
+      height: `${height}px`,
+      transition: `all ease-in-out ${transitionTime || 200}ms`,
+    };
+
+    if (isText || isInput) {
       styles = {
         ...styles,
-        opacity: `${node.el.style.opacity}`,
-        transform: `translate(${x}px,${y}px)`,
-        width: `${width}px`,
-        height: `${height}px`,
-        transition: `all ease-in-out ${transitionTime || 200}ms`,
+        "font-family": fontFamily,
+        "font-size": `${fontSize}px`,
+        "line-height": `${lineHeight}px`,
       };
+    }
 
-      if (isText || isInput) {
-        styles = {
-          ...styles,
-          "font-family": fontFamily,
-          "font-size": `${fontSize}px`,
-          "line-height": `${lineHeight}px`,
-        };
-      }
+    el.style.cssText = getStylesString(styles);
 
-      node.el.style.cssText = getStylesString(styles);
-
-      if (text) node.el.textContent = text;
-    }, node.comp.text);
+    if (text) el.textContent = text;
   }
-  function mount(parentEl, node) {
-    const { type } = node.comp;
+  function create(comp) {
+    const { type } = comp;
     const isText = type === "text";
     const isInput = type === "input";
     const tag = isText ? "span" : isInput ? "textarea" : "div";
     const el = document.createElement(tag);
-    if (node.exitTimeout) clearTimeout(node.exitTimeout);
-    el.style.opacity = "0";
-    setTimeout(() => (el.style.opacity = "1"), 0);
-    parentEl.appendChild(el);
     return el;
   }
-  function unmount(node) {
-    node.el.style.opacity = "0";
+  function mount(base, el) {
+    const node = nodes.get(el);
+    if (node?.exitTimeout) clearTimeout(node.exitTimeout);
+    el.style.opacity = "0";
+    setTimeout(() => (el.style.opacity = "1"), 0);
+    base.appendChild(el);
+  }
+  function unmount(el) {
+    el.style.opacity = "0";
+    const node = nodes.get(el);
     node.exitTimeout = setTimeout(() => {
-      node.el.remove();
+      el.remove();
     }, node.transitionTime || 200);
   }
 
-  return root;
+  return nodes;
 }
 
 const styles = Collection();
@@ -167,4 +138,25 @@ export function style(obj) {
     console.log("created new style", idd);
     return obj;
   });
+}
+
+export function padding(...args) {
+  const keys = ["paddingTop", "paddingRight", "paddingBottom", "paddingLeft"];
+  let parts = [];
+  if (args.lenth === 1) {
+    if (typeof args[0] === "string") {
+      parts = args[0].split(" ").map((s) => Number(s));
+    } else if (Array.isArray(args[0])) {
+      parts = args[0].map((s) => Number(s));
+    }
+  } else {
+    parts = args.map((s) => Number(s));
+  }
+  let values = [];
+  if (parts.length === 1) values = [0, 0, 0, 0];
+  if (parts.length === 2) values = [0, 1, 0, 1];
+  if (parts.length === 3) values = [0, 1, 2];
+  if (parts.length === 4) values = [0, 1, 2, 3];
+
+  return Object.fromEntries(values.map((x, i) => [keys[i], parts[x]]));
 }
