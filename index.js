@@ -18,7 +18,7 @@ const content = () => Text("this is the content of the page", { font: font() });
 const kiste = Box({
   width: 100,
   height: 100,
-  style: style({ "background-color": "blue" }),
+  ...style({ "background-color": "blue" }),
 });
 
 // const input = Input("test here", { font });
@@ -29,7 +29,7 @@ const container = (page) =>
       ? [
           Text("test", {
             id: "waka",
-            style: style({ color: "purple", "font-weight": "bold" }),
+            ...style({ color: "purple", "font-weight": "bold" }),
           }),
           Text("you should not be here"),
           kiste,
@@ -39,7 +39,7 @@ const container = (page) =>
           Text("you should not be here"),
           Text("testoooooooooo", {
             id: "waka",
-            style: style({ color: "green", "font-weight": "bold" }),
+            ...style({ color: "green", "font-weight": "bold" }),
           }),
           content(),
           kiste,

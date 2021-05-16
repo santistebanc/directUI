@@ -102,6 +102,14 @@ export const TextComponent = Component((atts) => {
     width: width(props),
     height: height(props),
     fontFamily: props.font?.names.fontFamily.en ?? "Courier New",
+    style: {
+      ...(props.style ?? {}),
+      ...Object.fromEntries(
+        Object.entries(props)
+          .filter(([k]) => k.startsWith("style."))
+          .map(([k, v]) => [k.substring("style.".length), v])
+      ),
+    },
     type: "text",
   };
 });

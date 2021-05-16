@@ -1,6 +1,5 @@
-import Collection from "./Cache/Collection";
 import { Auto } from "./direct";
-import { ensureArray, serializeProps } from "./utils";
+import { ensureArray, mapEntries } from "./utils";
 
 function getStylesString(styles) {
   return Object.entries(styles).reduce(
@@ -96,8 +95,7 @@ export function mountToDOM(base, renderFunc) {
     el.style.cssText = getStylesString(styles);
 
     if (text) el.textContent = text;
-
-    el.classList.add(String(index));
+    
   }
   function create(comp) {
     const { type } = comp;
@@ -146,13 +144,8 @@ export function mountToDOM(base, renderFunc) {
   return nodes;
 }
 
-const styles = Collection();
-
 export function style(obj) {
-  return styles.getOrAdd(obj, (idd) => {
-    console.log("created new style", idd);
-    return obj;
-  });
+  return mapEntries(obj, ([k, v]) => ["style." + k, v]);
 }
 
 export function padding(...args) {

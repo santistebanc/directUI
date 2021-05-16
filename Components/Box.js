@@ -166,6 +166,14 @@ export const BoxComponent = Component((atts) => {
     width: width(props),
     height: height(props),
     children: children(props),
+    style: {
+      ...(props.style ?? {}),
+      ...Object.fromEntries(
+        Object.entries(props)
+          .filter(([k]) => k.startsWith("style."))
+          .map(([k, v]) => [k.substring("style.".length), v])
+      ),
+    },
     type: "box",
   };
 });
