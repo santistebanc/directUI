@@ -1,4 +1,4 @@
-import Collection from "./Collection";
+import Collection from "./Cache/Collection";
 import { Auto } from "./direct";
 import { ensureArray, serializeProps } from "./utils";
 
@@ -9,32 +9,21 @@ function getStylesString(styles) {
   );
 }
 
-const getKeys = (comp) =>
-  comp.id
-    ? { type: comp.type, id: comp.id }
-    : {
-        ...serializeProps(comp.props),
-        type: comp.type,
-      };
-
-const sameComps = (c1, c2) => {
-  const k1 = getKeys(c1);
-  const k2 = getKeys(c2);
-  return (
-    Object.keys(k1).length === Object.keys(k2).length &&
-    !Object.entries(k1).some(([k, v]) => k2[k] !== v)
-  );
-};
-
 export function mountToDOM(base, renderFunc) {
   const nodes = new WeakMap();
-  function mountChildren(base, comps) {
-    console.log("mounting");
-    const mountedNodes = Array.from(base.children).map((el) => nodes.get(el));
+  Auto(() => {
+    console.log("RRREEEEREEEEENNNDEEERRR");
+    const comps = ensureArray(renderFunc());
+    mountChildren(base, comps);
+  });
 
+  function mountChildren(base, comps) {
+    const mountedNodes = Array.from(base.children).map((el) => nodes.get(el));
+    console.log("....start mount", comps, mountedNodes);
     const nodesToUnmount = mountedNodes.filter(
       (n) => n.active && !comps.some((ch) => sameComps(ch, n.comp))
     );
+    console.log("....end mount", nodesToUnmount);
 
     nodesToUnmount.forEach((n) => {
       const node = nodes.get(n.el);
@@ -43,25 +32,21 @@ export function mountToDOM(base, renderFunc) {
     });
 
     comps.forEach((comp) => {
+      console.log("....comp", Object.keys(comp));
       const mountedNode = mountedNodes.find((n) => sameComps(comp, n.comp));
+      console.log("....end");
       const el = mountedNode?.el ?? create(comp);
-      nodes
-        .set(el, {
-          el,
-          comp,
-          active: true,
-        })
-        .get(el);
+      nodes.set(el, {
+        el,
+        comp,
+        active: true,
+      });
+      if (comp.children) console.log("....before mount", comp.children);
       if (comp.children) mountChildren(el, comp.children);
       render(el);
       if (!mountedNode) mount(base, el);
     });
   }
-
-  Auto(() => {
-    const comps = ensureArray(renderFunc());
-    mountChildren(base, comps);
-  });
 
   function render(el) {
     const node = nodes.get(el);
@@ -126,6 +111,34 @@ export function mountToDOM(base, renderFunc) {
     node.exitTimeout = setTimeout(() => {
       el.remove();
     }, node.transitionTime || 200);
+  }
+
+  function getKeys(comp) {
+    return comp.id
+      ? { id: comp.id, type: comp.type }
+      : {
+          ...comp.keys,
+          type: comp.type,
+          index: comp.index,
+        };
+  }
+
+  function sameComps(c1, c2) {
+    const k1 = getKeys(c1);
+    const k2 = getKeys(c2);
+    console.log("....c1", Object.keys(c1), k1);
+    console.log("....c2", Object.keys(c2), k2);
+    if (c1.children)
+      console.log(
+        "....children same",
+        c1.children,
+        c2.children,
+        c1.children === c2.children
+      );
+    return (
+      Object.keys(k1).length === Object.keys(k2).length &&
+      !Object.entries(k1).some(([k, v]) => k2[k] !== v)
+    );
   }
 
   return nodes;

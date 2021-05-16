@@ -1,9 +1,6 @@
-import Memo from "./Memo";
-import { defineGetters, isFunction, mapEntries } from "./utils";
+import { isFunction, mapEntries } from "./utils";
 
 export let autos = new Set();
-export let trackers = new Set();
-export let context = {};
 export let statePending = null;
 
 export function Auto(func, nm) {
@@ -24,7 +21,6 @@ export function Auto(func, nm) {
 
 export function State(initialValue) {
   const get = () => {
-    [...trackers].forEach((func) => func(get, get.value));
     [...autos].forEach((func) => {
       func.disposers.set(get, () => get.observers.delete(func));
       get.observers.add(func);
@@ -89,40 +85,3 @@ State.transaction = (func) => {
   statePending = null;
   return output;
 };
-
-export function Cached(func, { limit, name } = {}) {
-  const memo = Memo({ limit });
-  const propKeys = new Set();
-  let cache;
-  let lastProps;
-
-  const output = (props) => {
-    if (lastProps === props) return cache;
-    lastProps = props;
-
-    const propValues = [...propKeys.keys()].map((key) => props[key]);
-
-    if (propKeys.size) {
-      const directValue = memo.get(propValues);
-      if (typeof directValue !== "undefined") {
-        cache = directValue;
-        return cache;
-      }
-    }
-
-    const trackingProps = defineGetters({}, props, (prop, key) => {
-      propKeys.add(key);
-      return prop;
-    });
-
-    cache = func(trackingProps);
-
-    const keys = [...propKeys.keys()].map((k) => props[k]);
-
-    memo.set(keys, cache);
-
-    return cache;
-  };
-  output.isCached = true;
-  return output;
-}

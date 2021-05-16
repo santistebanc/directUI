@@ -1,7 +1,6 @@
+import Cached from "../Cache/Cached";
 import { Component } from "./Component";
-import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
-import { Cached } from "./direct";
-import { width as textWidth, height as textHeight } from "./Text";
+import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "../constants";
 
 export const defaultProps = {
   text: "",

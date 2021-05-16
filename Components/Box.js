@@ -1,9 +1,10 @@
-import Collection from "./Collection";
+import Cached from "../Cache/Cached";
+import Collection from "../Cache/Collection";
 import { Component } from "./Component";
-import { Cached } from "./direct";
-import { ensureArray, isFunction } from "./utils";
+import { ensureArray } from "../utils";
 
 export const defaultProps = {
+  index: 0,
   children: [],
   paddingLeft: 0,
   paddingTop: 0,
@@ -22,7 +23,7 @@ export const defaultProps = {
 export const getDimensions = Cached(
   (props) => {
     const {
-      index,
+      childIndex,
       children,
       width,
       height,
@@ -42,7 +43,7 @@ export const getDimensions = Cached(
     let totalWidth = 0;
     let totalHeight = 0;
 
-    if (index > 0) {
+    if (childIndex > 0) {
       const {
         itemX,
         itemY,
@@ -50,7 +51,7 @@ export const getDimensions = Cached(
         singleLineHeight,
         containerWidth,
         containerHeight,
-      } = getDimensions({ ...props, index: index - 1 });
+      } = getDimensions({ ...props, childIndex: childIndex - 1 });
 
       startX = itemX + itemWidth + gapHorizontal;
       startY = itemY;
@@ -67,12 +68,12 @@ export const getDimensions = Cached(
       maxWidth: availableWidth,
     };
 
-    const renderedChild = children[index](propsToPass);
+    const renderedChild = children[childIndex](propsToPass);
     const calculatedWidth = renderedChild.width;
     const calculatedHeight = renderedChild.height;
 
     if (
-      index === 0 ||
+      childIndex === 0 ||
       startX + calculatedWidth <= availableWidth + paddingLeft
     ) {
       return {
@@ -122,13 +123,14 @@ export const getDimensions = Cached(
 export const children = Cached((props) => {
   const { children } = props;
   return children.map((child, index) => {
-    const dimensions = getDimensions({ ...props, index });
+    const dimensions = getDimensions({ ...props, childIndex: index });
 
     const propsToPassDown = {
       maxWidth: dimensions.itemWidth,
       maxHeight: dimensions.itemHeight,
       x: dimensions.itemX,
       y: dimensions.itemY,
+      index,
     };
 
     return child(propsToPassDown);
@@ -140,7 +142,7 @@ export const width = Cached((props) => {
   return (
     width ??
     (children.length
-      ? getDimensions({ ...props, index: children.length - 1 }).containerWidth
+      ? getDimensions({ ...props, childIndex: children.length - 1 }).containerWidth
       : 0)
   );
 });
@@ -150,7 +152,7 @@ export const height = Cached((props) => {
   return (
     height ??
     (children.length
-      ? getDimensions({ ...props, index: children.length - 1 }).containerHeight
+      ? getDimensions({ ...props, childIndex: children.length - 1 }).containerHeight
       : 0)
   );
 });

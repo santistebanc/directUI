@@ -1,9 +1,9 @@
+import Cached from "../Cache/Cached";
 import { Component } from "./Component";
-import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
-import { Cached } from "./direct";
-import { mapEntries } from "./utils";
+import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "../constants";
 
 export const defaultProps = {
+  index: 0,
   text: "",
   fontSize: DEFAULT_FONT_SIZE,
   lineHeight: DEFAULT_LINE_HEIGHT,
