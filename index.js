@@ -15,7 +15,7 @@ opentype
 
 const content = () => Text("this is the content of the page", { font: font() });
 
-const kiste = Box([Text("kiste")], {
+const kiste = Box({
   width: 100,
   height: 100,
   style: style({ "background-color": "blue" }),
@@ -31,8 +31,8 @@ const container = (page) =>
             id: "waka",
             style: style({ color: "purple", "font-weight": "bold" }),
           }),
-          kiste,
           Text("you should not be here"),
+          kiste,
           content(),
         ]
       : [

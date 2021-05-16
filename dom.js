@@ -12,18 +12,22 @@ function getStylesString(styles) {
 export function mountToDOM(base, renderFunc) {
   const nodes = new WeakMap();
   Auto(() => {
-    console.log("RRREEEEREEEEENNNDEEERRR");
     const comps = ensureArray(renderFunc());
     mountChildren(base, comps);
   });
 
   function mountChildren(base, comps) {
     const mountedNodes = Array.from(base.children).map((el) => nodes.get(el));
-    console.log("....start mount", comps, mountedNodes);
+    let compsToMatch = [...comps];
     const nodesToUnmount = mountedNodes.filter(
-      (n) => n.active && !comps.some((ch) => sameComps(ch, n.comp))
+      (n) =>
+        n.active &&
+        !compsToMatch.some((ch, i) => {
+          const same = sameComps(ch, n.comp);
+          if (same) compsToMatch.splice(i, 1);
+          return same;
+        })
     );
-    console.log("....end mount", nodesToUnmount);
 
     nodesToUnmount.forEach((n) => {
       const node = nodes.get(n.el);
@@ -31,17 +35,19 @@ export function mountToDOM(base, renderFunc) {
       unmount(n.el);
     });
 
+    const compsToRender = [...mountedNodes];
     comps.forEach((comp) => {
-      console.log("....comp", Object.keys(comp));
-      const mountedNode = mountedNodes.find((n) => sameComps(comp, n.comp));
-      console.log("....end");
+      const mountedNode = compsToRender.find((n, i) => {
+        const found = sameComps(comp, n.comp);
+        if (found) compsToRender.splice(i, 1);
+        return found;
+      });
       const el = mountedNode?.el ?? create(comp);
       nodes.set(el, {
         el,
         comp,
         active: true,
       });
-      if (comp.children) console.log("....before mount", comp.children);
       if (comp.children) mountChildren(el, comp.children);
       render(el);
       if (!mountedNode) mount(base, el);
@@ -51,6 +57,7 @@ export function mountToDOM(base, renderFunc) {
   function render(el) {
     const node = nodes.get(el);
     const {
+      index,
       type,
       x,
       y,
@@ -89,6 +96,8 @@ export function mountToDOM(base, renderFunc) {
     el.style.cssText = getStylesString(styles);
 
     if (text) el.textContent = text;
+
+    el.classList.add(String(index));
   }
   function create(comp) {
     const { type } = comp;
@@ -116,25 +125,18 @@ export function mountToDOM(base, renderFunc) {
   function getKeys(comp) {
     return comp.id
       ? { id: comp.id, type: comp.type }
+      : comp.children
+      ? { type: comp.type }
       : {
           ...comp.keys,
           type: comp.type,
-          index: comp.index,
         };
   }
 
   function sameComps(c1, c2) {
+    if (c1 === c2) return true;
     const k1 = getKeys(c1);
     const k2 = getKeys(c2);
-    console.log("....c1", Object.keys(c1), k1);
-    console.log("....c2", Object.keys(c2), k2);
-    if (c1.children)
-      console.log(
-        "....children same",
-        c1.children,
-        c2.children,
-        c1.children === c2.children
-      );
     return (
       Object.keys(k1).length === Object.keys(k2).length &&
       !Object.entries(k1).some(([k, v]) => k2[k] !== v)

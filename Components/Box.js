@@ -142,7 +142,8 @@ export const width = Cached((props) => {
   return (
     width ??
     (children.length
-      ? getDimensions({ ...props, childIndex: children.length - 1 }).containerWidth
+      ? getDimensions({ ...props, childIndex: children.length - 1 })
+          .containerWidth
       : 0)
   );
 });
@@ -152,7 +153,8 @@ export const height = Cached((props) => {
   return (
     height ??
     (children.length
-      ? getDimensions({ ...props, childIndex: children.length - 1 }).containerHeight
+      ? getDimensions({ ...props, childIndex: children.length - 1 })
+          .containerHeight
       : 0)
   );
 });
@@ -180,9 +182,11 @@ export function ch(obj) {
 export function Box(...args) {
   const parsedArgs = args[0].children
     ? ch(ensureArray(args[0]))
-    : {
+    : args[0]?.length
+    ? {
         children: ch(ensureArray(args[0])),
         ...args[1],
-      };
+      }
+    : args[0];
   return BoxComponent(parsedArgs);
 }

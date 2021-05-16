@@ -90,6 +90,7 @@ export function serializeProps(props) {
 }
 
 export function ensureArray(target) {
+  if (typeof target === "undefined") return [];
   if (Array.isArray(target)) return target;
   return [target];
 }
