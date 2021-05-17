@@ -2,7 +2,7 @@ import Cached from "../Cache/Cached";
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "../constants";
 import { width as textWidth, height as textHeight } from "./Text";
-import { getStylesString } from "../utils";
+import { getStylesString, mapEntries } from "../utils";
 import { State } from "../direct";
 
 export const defaultProps = {
@@ -53,6 +53,14 @@ export const InputComponent = Component((atts) => {
           .map(([k, v]) => [k.substring("style.".length), v])
       ),
     },
+    on: {
+      ...(props.on ?? {}),
+      ...Object.fromEntries(
+        Object.entries(props)
+          .filter(([k]) => k.startsWith("on."))
+          .map(([k, v]) => [k.substring("on.".length), v])
+      ),
+    },
     type: "input",
     create,
     mount,
@@ -70,12 +78,15 @@ export function Input(...args) {
 //dom
 
 export function create() {
-  this.text = State(this.comp.text ?? "");
+  console.log("+++++++++++++++++++++++++++++++++++++++crete called");
+  const { text, on } = this.comp;
+  this.text = State(text ?? "");
   const el = document.createElement("input");
-  el.oninput = (e) => {
-    this.text.set(e.target.value);
-    this.comp.oninput?.call(this, e);
-  };
+  this.eventListeners = mapEntries(on, ([k, v]) => [
+    k,
+    el.addEventListener(k, v),
+  ]);
+  el.oninput = (e) => this.text.set(e.target.value);
   return el;
 }
 

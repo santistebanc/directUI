@@ -1,7 +1,7 @@
 import Cached from "../Cache/Cached";
 import Collection from "../Cache/Collection";
 import { Component } from "./Component";
-import { ensureArray, getStylesString } from "../utils";
+import { ensureArray, getStylesString, mapEntries } from "../utils";
 
 export const defaultProps = {
   index: 0,
@@ -174,6 +174,14 @@ export const BoxComponent = Component((atts) => {
           .map(([k, v]) => [k.substring("style.".length), v])
       ),
     },
+    on: {
+      ...(props.on ?? {}),
+      ...Object.fromEntries(
+        Object.entries(props)
+          .filter(([k]) => k.startsWith("on."))
+          .map(([k, v]) => [k.substring("on.".length), v])
+      ),
+    },
     type: "box",
     create,
     mount,
@@ -207,7 +215,13 @@ export function Box(...args) {
 //dom
 
 export function create() {
-  return document.createElement("div");
+  const { on } = this.comp;
+  const el = document.createElement("div");
+  this.eventListeners = mapEntries(on, ([k, v]) => [
+    k,
+    el.addEventListener(k, v),
+  ]);
+  return el;
 }
 
 export function mount(base) {

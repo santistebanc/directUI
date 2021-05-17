@@ -1,7 +1,7 @@
 import Cached from "../Cache/Cached";
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "../constants";
-import { getStylesString } from "../utils";
+import { getStylesString, mapEntries } from "../utils";
 
 export const defaultProps = {
   index: 0,
@@ -88,7 +88,6 @@ export const getMaxWidth = Cached(({ maxWidth, text, fontSize, font }) => {
 
 export const width = Cached((props) => {
   const { maxWidth } = props;
-  console.log(".......props", props);
   if (getLines(props) > 1) return maxWidth;
   return getMaxWidth(props);
 });
@@ -114,6 +113,14 @@ export const TextComponent = Component((atts) => {
           .map(([k, v]) => [k.substring("style.".length), v])
       ),
     },
+    on: {
+      ...(props.on ?? {}),
+      ...Object.fromEntries(
+        Object.entries(props)
+          .filter(([k]) => k.startsWith("on."))
+          .map(([k, v]) => [k.substring("on.".length), v])
+      ),
+    },
     type: "text",
     create,
     mount,
@@ -133,7 +140,13 @@ export function Text(...args) {
 //dom
 
 export function create() {
-  return document.createElement("span");
+  const { on } = this.comp;
+  const el = document.createElement("span");
+  this.eventListeners = mapEntries(on, ([k, v]) => [
+    k,
+    el.addEventListener(k, v),
+  ]);
+  return el;
 }
 
 export function mount(base) {

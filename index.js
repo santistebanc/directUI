@@ -1,6 +1,6 @@
 import { Box } from "./Components/Box";
 import { State, Store } from "./direct";
-import { mountToDOM, padding, style } from "./dom";
+import { mountToDOM, padding, style, onEvent } from "./dom";
 import { Text } from "./Components/Text";
 import { Input } from "./Components/Input";
 import opentype from "opentype.js";
@@ -16,13 +16,18 @@ opentype
 
 const content = () => Text("this is the content of the page", { font: font() });
 
-const kiste = Box({
+const Kiste = Box({
   width: 100,
   height: 100,
   ...style({ "background-color": "blue" }),
+  ...onEvent({ click: () => console.log("clicked") }),
 });
 
-const input = () => Input({ font: font() });
+const input = () =>
+  Input({
+    text: "initial",
+    font: font(),
+  });
 
 const container = (page) =>
   Box(
@@ -33,7 +38,7 @@ const container = (page) =>
             ...style({ color: "purple", "font-weight": "bold" }),
           }),
           Text("you should not be here"),
-          kiste,
+          Kiste,
           content(),
           input(),
         ]
@@ -45,7 +50,7 @@ const container = (page) =>
             ...style({ color: "green", "font-weight": "bold" }),
           }),
           content(),
-          kiste,
+          Kiste,
         ]
   );
 

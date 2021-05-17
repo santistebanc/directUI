@@ -42,11 +42,8 @@ body {
 `;
 
 export function mountToDOM(base, renderFunc, { styles } = {}) {
-  const nodes = new Map();
-
   const globalStyle = State(globalStyles.concat(styles));
-  const root = { el: base, globalStyle };
-  nodes.set(base, root);
+  const root = { el: base, globalStyle, children: new Set() };
 
   //create <style> element in <head> for global styles
   const styleEl = document.createElement("style");
@@ -59,72 +56,86 @@ export function mountToDOM(base, renderFunc, { styles } = {}) {
 
   Auto(() => {
     const comps = ensureArray(renderFunc());
-    root.children = mountChildren(base, comps);
+    mountChildren(root, comps);
   });
 
-  function mountChildren(parentEl, comps) {
-    const mountedNodes = Array.from(parentEl.children).map((el) =>
-      nodes.get(el)
-    );
+  function mountChildren(parent, comps) {
+    const parentEl = parent.el;
+
+    //deactivate and unmount nodes that are no longer in the current children
+    const activeNodes = [...parent.children.values()].filter((n) => n.active);
     let compsToMatch = [...comps];
-    const nodesToUnmount = mountedNodes.filter(
+    const nodesToUnmount = activeNodes.filter(
       (n) =>
-        n.active &&
         !compsToMatch.some((ch, i) => {
           const same = sameComps(ch, n.comp);
           if (same) compsToMatch.splice(i, 1);
           return same;
         })
     );
-
-    nodesToUnmount.forEach((n) => {
-      const node = nodes.get(n.el);
+    nodesToUnmount.forEach((node) => {
       node.active = false;
-      n.comp.unmount?.call(n);
+      node.comp.unmount?.call(node);
     });
 
-    const compsToRender = [...mountedNodes];
-    return comps.map((comp) => {
-      const mountedNode = compsToRender.find((n, i) => {
+    //create new nodes that were not in the parent.children Set()
+    let nodesToMatch = [...parent.children.values()];
+    const nodesToRender = comps.map((comp) => {
+      let node = nodesToMatch.find((n, i) => {
         const found = sameComps(comp, n.comp);
-        if (found) compsToRender.splice(i, 1);
+        if (found) nodesToMatch.splice(i, 1);
         return found;
       });
-      const node = {
-        comp,
-        root,
-        parent: nodes.get(parentEl),
-      };
-      const el = mountedNode?.el ?? comp.create?.call(node);
-      node.el = el;
-      node.active = true;
-      nodes.set(el, node);
-      if (comp.children) node.children = mountChildren(el, comp.children);
+      if (!node) {
+        node = {
+          comp,
+          root,
+          parent,
+          globalStyle,
+          children: new Set(),
+        };
+        node.el = comp.create?.call(node);
+        parent.children.add(node);
+      }
+      node.comp = comp;
+      return node;
+    });
+
+    return nodesToRender.map((node) => {
+      const comp = node.comp;
+
+      if (comp.children) mountChildren(node, comp.children);
       comp.render?.call(node);
-      if (!mountedNode) comp.mount?.call(node, parentEl);
+      if (!node.active) comp.mount?.call(node, parentEl);
+
+      node.active = true;
       return node;
     });
   }
 
-  function getKeys(comp) {
-    return comp.id ? { id: comp.id, type: comp.type } : { type: comp.type };
-  }
+  return root;
+}
 
-  function sameComps(c1, c2) {
-    if (c1 === c2) return true;
-    const k1 = getKeys(c1);
-    const k2 = getKeys(c2);
-    return (
-      Object.keys(k1).length === Object.keys(k2).length &&
-      !Object.entries(k1).some(([k, v]) => k2[k] !== v)
-    );
-  }
+function getKeys(comp) {
+  return comp.id ? { id: comp.id, type: comp.type } : { type: comp.type };
+}
 
-  return nodes;
+function sameComps(c1, c2) {
+  if (c1 === c2) return true;
+  const k1 = getKeys(c1);
+  const k2 = getKeys(c2);
+  return (
+    Object.keys(k1).length === Object.keys(k2).length &&
+    !Object.entries(k1).some(([k, v]) => k2[k] !== v)
+  );
 }
 
 export function style(obj) {
   return mapEntries(obj, ([k, v]) => ["style." + k, v]);
+}
+
+export function onEvent(obj) {
+  return mapEntries(obj, ([k, v]) => ["on." + k, v]);
 }
 
 export function padding(...args) {
