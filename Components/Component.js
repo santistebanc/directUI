@@ -3,7 +3,7 @@ import Collection from "../Cache/Collection";
 const components = Collection();
 
 export function Component(output) {
-  const Template = (attributes = {}, keys) => {
+  const Template = (attributes = {}) => {
     return components.getOrAdd({ ...attributes, output }, (idd) => {
       console.log("created new component", idd);
       const inst = (props = {}) => {
@@ -15,7 +15,6 @@ export function Component(output) {
         );
       };
       inst.props = { ...attributes };
-      inst.keys = keys ?? attributes;
       Object.assign(inst, output(inst.props));
       return inst;
     });

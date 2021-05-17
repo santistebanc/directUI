@@ -1,13 +1,62 @@
-import { Auto } from "./direct";
-import { ensureArray, mapEntries } from "./utils";
+import { Auto, State } from "./direct";
+import { ensureArray, getStylesString, mapEntries } from "./utils";
 
-export function mountToDOM(base, renderFunc) {
+const globalStyles = `
+@font-face {
+  font-family: "Open Sans";
+  src: url("fonts/OpenSans-Regular.ttf");
+}
+
+body {
+  overflow: hidden;
+  margin: 0;
+}
+
+#app,
+#app * {
+  will-change: transform, opacity;
+
+  font-family: "Courier New";
+  font-size: 14px;
+  font-kerning: none;
+  line-height: 16px;
+  /* user-select: none; */
+  outline: 1px dotted lightgray;
+
+  position: absolute;
+}
+
+#app * {
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background-image: none;
+  background-color: transparent;
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+  resize: none;
+}
+
+`;
+
+export function mountToDOM(base, renderFunc, { styles } = {}) {
   const nodes = new Map();
-  const root = nodes
-    .set(base, {
-      el: base,
-    })
-    .get(base);
+
+  const globalStyle = State(globalStyles.concat(styles));
+  const root = { el: base, globalStyle };
+  nodes.set(base, root);
+
+  //create <style> element in <head> for global styles
+  const styleEl = document.createElement("style");
+  styleEl.appendChild(document.createTextNode(globalStyle));
+  document.getElementsByTagName("head")[0].appendChild(styleEl);
+
+  Auto(() => {
+    styleEl.innerHTML = globalStyle();
+  });
+
   Auto(() => {
     const comps = ensureArray(renderFunc());
     root.children = mountChildren(base, comps);
@@ -41,16 +90,15 @@ export function mountToDOM(base, renderFunc) {
         if (found) compsToRender.splice(i, 1);
         return found;
       });
-      const el = mountedNode?.el ?? comp.create?.call(null);
-      const node = nodes
-        .set(el, {
-          el,
-          comp,
-          active: true,
-          root,
-          parent: nodes.get(parentEl),
-        })
-        .get(el);
+      const node = {
+        comp,
+        root,
+        parent: nodes.get(parentEl),
+      };
+      const el = mountedNode?.el ?? comp.create?.call(node);
+      node.el = el;
+      node.active = true;
+      nodes.set(el, node);
       if (comp.children) node.children = mountChildren(el, comp.children);
       comp.render?.call(node);
       if (!mountedNode) comp.mount?.call(node, parentEl);
@@ -59,14 +107,7 @@ export function mountToDOM(base, renderFunc) {
   }
 
   function getKeys(comp) {
-    return comp.id
-      ? { id: comp.id, type: comp.type }
-      : comp.children
-      ? { type: comp.type }
-      : {
-          ...comp.keys,
-          type: comp.type,
-        };
+    return comp.id ? { id: comp.id, type: comp.type } : { type: comp.type };
   }
 
   function sameComps(c1, c2) {

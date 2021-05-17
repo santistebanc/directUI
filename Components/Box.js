@@ -192,14 +192,15 @@ export function ch(obj) {
 }
 
 export function Box(...args) {
-  const parsedArgs = args[0].children
-    ? ch(ensureArray(args[0]))
-    : args[0]?.length
+  const parsedArgs = Array.isArray(args[0])
     ? {
-        children: ch(ensureArray(args[0])),
+        children: ch(args[0]) ?? [],
         ...args[1],
       }
-    : args[0];
+    : {
+        ...args[0],
+        children: ch(ensureArray(args[0].children)) ?? [],
+      };
   return BoxComponent(parsedArgs);
 }
 

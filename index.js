@@ -22,7 +22,7 @@ const kiste = Box({
   ...style({ "background-color": "blue" }),
 });
 
-// const input = Input("test here", { font });
+const input = () => Input({ font: font() });
 
 const container = (page) =>
   Box(
@@ -35,10 +35,10 @@ const container = (page) =>
           Text("you should not be here"),
           kiste,
           content(),
-          Input(),
+          input(),
         ]
       : [
-          Input(),
+          input(),
           Text("you should not be here"),
           Text("testoooooooooo", {
             id: "waka",

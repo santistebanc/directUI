@@ -17,11 +17,11 @@ export const defaultProps = {
 
 export const getCharWidth = Cached(
   ({ char, fontSize, font }) =>
-    font?.getAdvanceWidth(char, fontSize) || (fontSize * 1229) / 2048
+    font?.getAdvanceWidth(char ?? "", fontSize ?? 0) || (fontSize * 1229) / 2048
 );
 
 export const getStringWidth = Cached(({ text, fontSize, font }) =>
-  text.length === 0
+  !text?.length
     ? 0
     : font
     ? text
@@ -33,7 +33,7 @@ export const getStringWidth = Cached(({ text, fontSize, font }) =>
 export const getWords = Cached(({ text, fontSize, font }) => {
   const spaceWidth = getStringWidth({ text: " ", fontSize, font });
   let widthSoFar = 0;
-  return text.split(" ").map((wordText, i) => {
+  return (text ?? "").split(" ").map((wordText, i) => {
     const wordWidth = getStringWidth({ text: wordText, fontSize, font });
     widthSoFar += wordWidth + (i > 0 ? spaceWidth : 0);
     return { wordText, wordWidth, widthSoFar };
@@ -43,7 +43,7 @@ export const getWords = Cached(({ text, fontSize, font }) => {
 export const getLines = Cached((props) => {
   const { text, fontSize, font } = props;
 
-  if (text.length === 0) return 0;
+  if (!text?.length) return 0;
 
   const spaceWidth = getStringWidth({ text: " ", fontSize, font });
   const availableWidth = getMaxWidth(props);
@@ -88,6 +88,7 @@ export const getMaxWidth = Cached(({ maxWidth, text, fontSize, font }) => {
 
 export const width = Cached((props) => {
   const { maxWidth } = props;
+  console.log(".......props", props);
   if (getLines(props) > 1) return maxWidth;
   return getMaxWidth(props);
 });
@@ -122,7 +123,10 @@ export const TextComponent = Component((atts) => {
 });
 
 export function Text(...args) {
-  const parsedArgs = args[0].text ? args[0] : { text: args[0], ...args[1] };
+  const parsedArgs =
+    typeof args[0] === "object"
+      ? { ...args[0], text: args[0] ?? "" }
+      : { text: args[0], ...args[1] };
   return TextComponent(parsedArgs);
 }
 

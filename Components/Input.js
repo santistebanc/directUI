@@ -3,10 +3,10 @@ import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "../constants";
 import { width as textWidth, height as textHeight } from "./Text";
 import { getStylesString } from "../utils";
+import { State } from "../direct";
 
 export const defaultProps = {
   index: 0,
-  text: "",
   fontSize: DEFAULT_FONT_SIZE,
   lineHeight: DEFAULT_LINE_HEIGHT,
   maxHeight: Infinity,
@@ -62,16 +62,21 @@ export const InputComponent = Component((atts) => {
 });
 
 export function Input(...args) {
-  const parsedArgs = args[0]?.text
-    ? args[0]
-    : { text: args[0] ?? "", ...args[1] };
+  const parsedArgs =
+    typeof args[0] === "object" ? args[0] : { text: args[0], ...args[1] };
   return InputComponent(parsedArgs);
 }
 
 //dom
 
 export function create() {
-  return document.createElement("span");
+  this.text = State(this.comp.text ?? "");
+  const el = document.createElement("input");
+  el.oninput = (e) => {
+    this.text.set(e.target.value);
+    this.comp.oninput?.call(this, e);
+  };
+  return el;
 }
 
 export function mount(parentEl) {
@@ -97,7 +102,6 @@ export function render() {
     y,
     width,
     height,
-    text,
     fontFamily,
     fontSize,
     lineHeight,
@@ -118,5 +122,5 @@ export function render() {
   };
 
   el.style.cssText = getStylesString(styles);
-  el.textContent = text;
+  if (typeof this.text !== "undefined") el.value = this.text();
 }

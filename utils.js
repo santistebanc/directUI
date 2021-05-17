@@ -96,6 +96,7 @@ export function ensureArray(target) {
 }
 
 export function getStylesString(styles) {
+  if (!styles || !Object.keys(styles)) return "";
   return Object.entries(styles).reduce(
     (str, [key, val]) => `${str}${key}: ${val};`,
     ""
