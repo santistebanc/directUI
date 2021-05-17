@@ -1,7 +1,7 @@
 import Cached from "../Cache/Cached";
 import Collection from "../Cache/Collection";
 import { Component } from "./Component";
-import { ensureArray } from "../utils";
+import { ensureArray, getStylesString } from "../utils";
 
 export const defaultProps = {
   index: 0,
@@ -175,6 +175,10 @@ export const BoxComponent = Component((atts) => {
       ),
     },
     type: "box",
+    create,
+    mount,
+    unmount,
+    render,
   };
 });
 
@@ -197,4 +201,42 @@ export function Box(...args) {
       }
     : args[0];
   return BoxComponent(parsedArgs);
+}
+
+//dom
+
+export function create() {
+  return document.createElement("div");
+}
+
+export function mount(base) {
+  const el = this.el;
+  if (this.exitTimeout) clearTimeout(this.exitTimeout);
+  el.style.opacity = "0";
+  setTimeout(() => (el.style.opacity = "1"), 0);
+  base.appendChild(el);
+}
+
+export function unmount() {
+  const el = this.el;
+  el.style.opacity = "0";
+  this.exitTimeout = setTimeout(() => {
+    el.remove();
+  }, this.transitionTime || 200);
+}
+
+export function render() {
+  const el = this.el;
+  const { x, y, width, height, style, transitionTime } = this.comp;
+
+  const styles = {
+    ...style,
+    opacity: `${el.style.opacity}`,
+    transform: `translate(${x}px,${y}px)`,
+    width: `${width}px`,
+    height: `${height}px`,
+    transition: `all ease-in-out ${transitionTime || 200}ms`,
+  };
+
+  el.style.cssText = getStylesString(styles);
 }

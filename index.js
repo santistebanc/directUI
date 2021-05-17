@@ -2,6 +2,7 @@ import { Box } from "./Components/Box";
 import { State, Store } from "./direct";
 import { mountToDOM, padding, style } from "./dom";
 import { Text } from "./Components/Text";
+import { Input } from "./Components/Input";
 import opentype from "opentype.js";
 
 const font = State(null);
@@ -34,8 +35,10 @@ const container = (page) =>
           Text("you should not be here"),
           kiste,
           content(),
+          Input(),
         ]
       : [
+          Input(),
           Text("you should not be here"),
           Text("testoooooooooo", {
             id: "waka",
@@ -74,10 +77,15 @@ const app = mountToDOM(base, () =>
   })
 );
 
+// const app = mountToDOM(
+//   base,
+//   () => Text("hello world", { font: font(), ...style({ "font-weight": "bold" }) })
+// );
+
 console.log(app);
 
 setInterval(() => {
-  store.page.set((val) => val + 1);
+  store.page.set(store.page() + 1);
 }, 5000);
 
 window.onresize = () => {

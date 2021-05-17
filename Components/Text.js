@@ -1,6 +1,7 @@
 import Cached from "../Cache/Cached";
 import { Component } from "./Component";
 import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "../constants";
+import { getStylesString } from "../utils";
 
 export const defaultProps = {
   index: 0,
@@ -20,7 +21,9 @@ export const getCharWidth = Cached(
 );
 
 export const getStringWidth = Cached(({ text, fontSize, font }) =>
-  font
+  text.length === 0
+    ? 0
+    : font
     ? text
         .split("")
         .reduce((sum, char) => sum + getCharWidth({ char, fontSize, font }), 0)
@@ -39,6 +42,9 @@ export const getWords = Cached(({ text, fontSize, font }) => {
 
 export const getLines = Cached((props) => {
   const { text, fontSize, font } = props;
+
+  if (text.length === 0) return 0;
+
   const spaceWidth = getStringWidth({ text: " ", fontSize, font });
   const availableWidth = getMaxWidth(props);
 
@@ -80,14 +86,11 @@ export const getMaxWidth = Cached(({ maxWidth, text, fontSize, font }) => {
   return Math.min(maxWidth, words[words.length - 1].widthSoFar);
 });
 
-export const width = Cached(
-  (props) => {
-    const { maxWidth } = props;
-    if (getLines(props) > 1) return maxWidth;
-    return getMaxWidth(props);
-  },
-  { name: "textWIIIIDTH" }
-);
+export const width = Cached((props) => {
+  const { maxWidth } = props;
+  if (getLines(props) > 1) return maxWidth;
+  return getMaxWidth(props);
+});
 
 export const height = Cached((props) => {
   const { lineHeight } = props;
@@ -111,10 +114,67 @@ export const TextComponent = Component((atts) => {
       ),
     },
     type: "text",
+    create,
+    mount,
+    unmount,
+    render,
   };
 });
 
 export function Text(...args) {
   const parsedArgs = args[0].text ? args[0] : { text: args[0], ...args[1] };
   return TextComponent(parsedArgs);
+}
+
+//dom
+
+export function create() {
+  return document.createElement("span");
+}
+
+export function mount(base) {
+  const el = this.el;
+  if (this.exitTimeout) clearTimeout(this.exitTimeout);
+  el.style.opacity = "0";
+  setTimeout(() => (el.style.opacity = "1"), 0);
+  base.appendChild(el);
+}
+
+export function unmount() {
+  const el = this.el;
+  el.style.opacity = "0";
+  this.exitTimeout = setTimeout(() => {
+    el.remove();
+  }, this.transitionTime || 200);
+}
+
+export function render() {
+  const el = this.el;
+  const {
+    x,
+    y,
+    width,
+    height,
+    text,
+    fontFamily,
+    fontSize,
+    lineHeight,
+    style,
+    transitionTime,
+  } = this.comp;
+
+  const styles = {
+    ...style,
+    opacity: `${el.style.opacity}`,
+    transform: `translate(${x}px,${y}px)`,
+    width: `${width}px`,
+    height: `${height}px`,
+    transition: `all ease-in-out ${transitionTime || 200}ms`,
+    "font-family": fontFamily,
+    "font-size": `${fontSize}px`,
+    "line-height": `${lineHeight}px`,
+  };
+
+  el.style.cssText = getStylesString(styles);
+  el.textContent = text;
 }

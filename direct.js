@@ -60,8 +60,11 @@ export function Store(initalValues) {
 
   output.setState = (key, val) => {
     if (val) {
-      if (Array.isArray(key))
-        return Object.fromEntries(key.map((k, i) => output[k].set(val[i])));
+      if (Array.isArray(key)) {
+        return State.transaction(() =>
+          Object.fromEntries(key.map((k, i) => output[k].set(val[i])))
+        );
+      }
       return output[key].set(val);
     }
     return mapEntries(key, ([k, v]) => [k, output[k].set(v)]);

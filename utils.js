@@ -94,3 +94,10 @@ export function ensureArray(target) {
   if (Array.isArray(target)) return target;
   return [target];
 }
+
+export function getStylesString(styles) {
+  return Object.entries(styles).reduce(
+    (str, [key, val]) => `${str}${key}: ${val};`,
+    ""
+  );
+}

@@ -1,22 +1,22 @@
 import { Auto } from "./direct";
 import { ensureArray, mapEntries } from "./utils";
 
-function getStylesString(styles) {
-  return Object.entries(styles).reduce(
-    (str, [key, val]) => `${str}${key}: ${val};`,
-    ""
-  );
-}
-
 export function mountToDOM(base, renderFunc) {
-  const nodes = new WeakMap();
+  const nodes = new Map();
+  const root = nodes
+    .set(base, {
+      el: base,
+    })
+    .get(base);
   Auto(() => {
     const comps = ensureArray(renderFunc());
-    mountChildren(base, comps);
+    root.children = mountChildren(base, comps);
   });
 
-  function mountChildren(base, comps) {
-    const mountedNodes = Array.from(base.children).map((el) => nodes.get(el));
+  function mountChildren(parentEl, comps) {
+    const mountedNodes = Array.from(parentEl.children).map((el) =>
+      nodes.get(el)
+    );
     let compsToMatch = [...comps];
     const nodesToUnmount = mountedNodes.filter(
       (n) =>
@@ -31,93 +31,31 @@ export function mountToDOM(base, renderFunc) {
     nodesToUnmount.forEach((n) => {
       const node = nodes.get(n.el);
       node.active = false;
-      unmount(n.el);
+      n.comp.unmount?.call(n);
     });
 
     const compsToRender = [...mountedNodes];
-    comps.forEach((comp) => {
+    return comps.map((comp) => {
       const mountedNode = compsToRender.find((n, i) => {
         const found = sameComps(comp, n.comp);
         if (found) compsToRender.splice(i, 1);
         return found;
       });
-      const el = mountedNode?.el ?? create(comp);
-      nodes.set(el, {
-        el,
-        comp,
-        active: true,
-      });
-      if (comp.children) mountChildren(el, comp.children);
-      render(el);
-      if (!mountedNode) mount(base, el);
+      const el = mountedNode?.el ?? comp.create?.call(null);
+      const node = nodes
+        .set(el, {
+          el,
+          comp,
+          active: true,
+          root,
+          parent: nodes.get(parentEl),
+        })
+        .get(el);
+      if (comp.children) node.children = mountChildren(el, comp.children);
+      comp.render?.call(node);
+      if (!mountedNode) comp.mount?.call(node, parentEl);
+      return node;
     });
-  }
-
-  function render(el) {
-    const node = nodes.get(el);
-    const {
-      index,
-      type,
-      x,
-      y,
-      width,
-      height,
-      text,
-      fontFamily,
-      fontSize,
-      lineHeight,
-      style,
-      transitionTime,
-    } = node.comp;
-    const isText = type === "text";
-    const isInput = type === "input";
-
-    let styles = { ...style };
-
-    styles = {
-      ...styles,
-      opacity: `${el.style.opacity}`,
-      transform: `translate(${x}px,${y}px)`,
-      width: `${width}px`,
-      height: `${height}px`,
-      transition: `all ease-in-out ${transitionTime || 200}ms`,
-    };
-
-    if (isText || isInput) {
-      styles = {
-        ...styles,
-        "font-family": fontFamily,
-        "font-size": `${fontSize}px`,
-        "line-height": `${lineHeight}px`,
-      };
-    }
-
-    el.style.cssText = getStylesString(styles);
-
-    if (text) el.textContent = text;
-    
-  }
-  function create(comp) {
-    const { type } = comp;
-    const isText = type === "text";
-    const isInput = type === "input";
-    const tag = isText ? "span" : isInput ? "textarea" : "div";
-    const el = document.createElement(tag);
-    return el;
-  }
-  function mount(base, el) {
-    const node = nodes.get(el);
-    if (node?.exitTimeout) clearTimeout(node.exitTimeout);
-    el.style.opacity = "0";
-    setTimeout(() => (el.style.opacity = "1"), 0);
-    base.appendChild(el);
-  }
-  function unmount(el) {
-    el.style.opacity = "0";
-    const node = nodes.get(el);
-    node.exitTimeout = setTimeout(() => {
-      el.remove();
-    }, node.transitionTime || 200);
   }
 
   function getKeys(comp) {
