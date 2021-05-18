@@ -1,16 +1,10 @@
 import { Box } from "./Components/Box";
 import { State, Store } from "./direct";
-import { mountToDOM, padding, style, onEvent } from "./dom";
+import { mountToDOM, padding, style, onEvent, Font } from "./dom";
 import { Text } from "./Components/Text";
 import { Input } from "./Components/Input";
-import opentype from "opentype.js";
 
-const font = State(null);
-
-opentype
-  .load("fonts/OpenSans-Regular.ttf")
-  .then((res) => new Promise((resolve) => setTimeout(() => resolve(res), 5000)))
-  .then((res) => font.set(res));
+const font = Font("fonts/OpenSans-Regular.ttf");
 
 // const title = Text(({ page }) => "hello world " + page(), { font });
 
@@ -35,18 +29,20 @@ const container = (page) =>
       ? [
           Text("test", {
             id: "waka",
+            font: font(),
             ...style({ color: "purple", "font-weight": "bold" }),
           }),
-          Text("you should not be here"),
+          Text("you should not be here", { font: font() }),
           Kiste,
           content(),
           input(),
         ]
       : [
           input(),
-          Text("you should not be here"),
+          Text("you should not be here", { font: font() }),
           Text("testoooooooooo", {
             id: "waka",
+            font: font(),
             ...style({ color: "green", "font-weight": "bold" }),
           }),
           content(),
@@ -64,7 +60,11 @@ const main = ({ page, screenHeight, screenWidth }) =>
   Box(
     page % 5 !== 4
       ? [container(page)]
-      : [Text("non"), Text("non"), Text("yes")],
+      : [
+          Text("non", { font: font() }),
+          Text("non", { font: font() }),
+          Text("yes", { font: font() }),
+        ],
     {
       width: screenWidth,
       height: screenHeight / 2,
@@ -73,13 +73,14 @@ const main = ({ page, screenHeight, screenWidth }) =>
     }
   );
 
-const base = document.querySelector("#app");
-const app = mountToDOM(base, () =>
-  main({
-    page: store.page(),
-    screenHeight: store.screenHeight(),
-    screenWidth: store.screenWidth(),
-  })
+const app = mountToDOM(
+  () =>
+    main({
+      page: store.page(),
+      screenHeight: store.screenHeight(),
+      screenWidth: store.screenWidth(),
+    }),
+  { font: font() }
 );
 
 // const app = mountToDOM(

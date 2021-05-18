@@ -1,58 +1,52 @@
 import { Auto, State } from "./direct";
-import { ensureArray, getStylesString, mapEntries } from "./utils";
+import { ensureArray, mapEntries } from "./utils";
+import opentype from "opentype.js";
 
-const globalStyles = `
-@font-face {
-  font-family: "Open Sans";
-  src: url("fonts/OpenSans-Regular.ttf");
-}
-
-body {
-  overflow: hidden;
-  margin: 0;
-}
-
-#app,
-#app * {
-  will-change: transform, opacity;
-
-  font-family: "Courier New";
-  font-size: 14px;
-  font-kerning: none;
-  line-height: 16px;
-  /* user-select: none; */
-  outline: 1px dotted lightgray;
-
-  position: absolute;
-}
-
-#app * {
-  overflow: hidden;
-  padding: 0;
-  margin: 0;
-  border: none;
-  background-image: none;
-  background-color: transparent;
-  -webkit-box-shadow: none;
-  -moz-box-shadow: none;
-  box-shadow: none;
-  resize: none;
-}
-
-`;
-
-export function mountToDOM(base, renderFunc, { styles } = {}) {
-  const globalStyle = State(globalStyles.concat(styles));
-  const root = { el: base, globalStyle, children: new Set() };
-
+export function mountToDOM(
+  renderFunc,
+  { selector = "body", font, initialStyles = "" } = {}
+) {
+  const base = document.querySelector(selector);
   //create <style> element in <head> for global styles
   const styleEl = document.createElement("style");
-  styleEl.appendChild(document.createTextNode(globalStyle));
-  document.getElementsByTagName("head")[0].appendChild(styleEl);
+  styleEl.appendChild(document.createTextNode(initialStyles));
+  document.head.appendChild(styleEl);
+  const sheet = styleEl.sheet;
 
-  Auto(() => {
-    styleEl.innerHTML = globalStyle();
-  });
+  sheet.insertRule(
+    `
+    ${selector}, ${selector} *
+    {
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    will-change: transform, opacity;
+    font-family: "Courier New";
+    font-size: 14px;
+    font-kerning: none;
+    line-height: 16px;
+    position: absolute;
+    border: none;
+    background-image: none;
+    background-color: transparent;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    resize: none;
+    }
+    `
+  );
+
+  const root = { el: base, sheet, children: [] };
+
+  if (font) {
+    sheet.insertRule(`
+      @font-face {
+        font-family: "${font.fontFamily}";
+        src: url("${font.src}");
+      }
+    `);
+  }
 
   Auto(() => {
     const comps = ensureArray(renderFunc());
@@ -63,7 +57,7 @@ export function mountToDOM(base, renderFunc, { styles } = {}) {
     const parentEl = parent.el;
 
     //deactivate and unmount nodes that are no longer in the current children
-    const activeNodes = [...parent.children.values()].filter((n) => n.active);
+    const activeNodes = parent.children.filter((n) => n.active);
     let compsToMatch = [...comps];
     const nodesToUnmount = activeNodes.filter(
       (n) =>
@@ -78,8 +72,8 @@ export function mountToDOM(base, renderFunc, { styles } = {}) {
       node.comp.unmount?.call(node);
     });
 
-    //create new nodes that were not in the parent.children Set()
-    let nodesToMatch = [...parent.children.values()];
+    //create new nodes that were not in the parent.children
+    let nodesToMatch = [...parent.children];
     const nodesToRender = comps.map((comp) => {
       let node = nodesToMatch.find((n, i) => {
         const found = sameComps(comp, n.comp);
@@ -91,11 +85,11 @@ export function mountToDOM(base, renderFunc, { styles } = {}) {
           comp,
           root,
           parent,
-          globalStyle,
-          children: new Set(),
+          sheet,
+          children: [],
         };
         node.el = comp.create?.call(node);
-        parent.children.add(node);
+        parent.children.push(node);
       }
       node.comp = comp;
       return node;
@@ -157,4 +151,20 @@ export function padding(...args) {
   if (parts.length === 4) values = [0, 1, 2, 3];
 
   return Object.fromEntries(values.map((x, i) => [keys[i], parts[x]]));
+}
+
+export function Font(
+  src,
+  fontFamily = "Courier New",
+  getWidth = (text, fontSize) => (text.length * (fontSize * 1229)) / 2048
+) {
+  const font = State({ src, fontFamily, getWidth });
+  opentype.load(src).then((res) =>
+    font.set({
+      src,
+      fontFamily,
+      getWidth: (text, fontSize) => res.getAdvanceWidth(text, fontSize),
+    })
+  );
+  return font;
 }

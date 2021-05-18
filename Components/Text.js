@@ -15,19 +15,16 @@ export const defaultProps = {
   font: null,
 };
 
-export const getCharWidth = Cached(
-  ({ char, fontSize, font }) =>
-    font?.getAdvanceWidth(char ?? "", fontSize ?? 0) || (fontSize * 1229) / 2048
+export const getCharWidth = Cached(({ char, fontSize, font }) =>
+  font.getWidth(char ?? "", fontSize ?? 0)
 );
 
 export const getStringWidth = Cached(({ text, fontSize, font }) =>
   !text?.length
     ? 0
-    : font
-    ? text
+    : text
         .split("")
         .reduce((sum, char) => sum + getCharWidth({ char, fontSize, font }), 0)
-    : (text.length * fontSize * 1229) / 2048
 );
 
 export const getWords = Cached(({ text, fontSize, font }) => {
@@ -104,7 +101,7 @@ export const TextComponent = Component((atts) => {
     ...props,
     width: width(props),
     height: height(props),
-    fontFamily: props.font?.names.fontFamily.en ?? "Courier New",
+    fontFamily: props.font.fontFamily,
     style: {
       ...(props.style ?? {}),
       ...Object.fromEntries(

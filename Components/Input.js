@@ -44,7 +44,7 @@ export const InputComponent = Component((atts) => {
     ...props,
     width: width(props),
     height: height(props),
-    fontFamily: props.font?.names.fontFamily.en ?? "Courier New",
+    fontFamily: props.font.fontFamily,
     style: {
       ...(props.style ?? {}),
       ...Object.fromEntries(
@@ -78,7 +78,6 @@ export function Input(...args) {
 //dom
 
 export function create() {
-  console.log("+++++++++++++++++++++++++++++++++++++++crete called");
   const { text, on } = this.comp;
   this.text = State(text ?? "");
   const el = document.createElement("input");
