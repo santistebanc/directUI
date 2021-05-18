@@ -1,7 +1,12 @@
 import Cached from "../Cache/Cached";
 import { Component } from "./Component";
-import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "../constants";
-import { getStylesString, mapEntries } from "../utils";
+import {
+  DEFAULT_FONT,
+  DEFAULT_FONT_SIZE,
+  DEFAULT_LINE_HEIGHT,
+} from "../constants";
+import { getStylesString, mapEntries, parsePrefixes } from "../utils";
+import { parseOutput } from "../dom";
 
 export const defaultProps = {
   index: 0,
@@ -12,11 +17,13 @@ export const defaultProps = {
   maxWidth: Infinity,
   x: 0,
   y: 0,
-  font: null,
+  font: DEFAULT_FONT,
 };
 
-export const getCharWidth = Cached(({ char, fontSize, font }) =>
-  font.getWidth(char ?? "", fontSize ?? 0)
+export const getCharWidth = Cached(({ char = "", fontSize = 0, font }) =>
+  !font.loading
+    ? font.getWidth(char, fontSize)
+    : DEFAULT_FONT.getWidth(char, fontSize)
 );
 
 export const getStringWidth = Cached(({ text, fontSize, font }) =>
@@ -95,36 +102,23 @@ export const height = Cached((props) => {
   return linesCount * lineHeight;
 });
 
-export const TextComponent = Component((atts) => {
-  const props = { ...defaultProps, ...atts };
-  return {
-    ...props,
-    width: width(props),
-    height: height(props),
-    fontFamily: props.font.fontFamily,
-    style: {
-      ...(props.style ?? {}),
-      ...Object.fromEntries(
-        Object.entries(props)
-          .filter(([k]) => k.startsWith("style."))
-          .map(([k, v]) => [k.substring("style.".length), v])
-      ),
+export const TextComponent = Component((atts) =>
+  parseOutput({
+    atts,
+    defaultProps,
+    compClass: TextComponent,
+    props: {
+      create,
+      mount,
+      unmount,
+      render,
     },
-    on: {
-      ...(props.on ?? {}),
-      ...Object.fromEntries(
-        Object.entries(props)
-          .filter(([k]) => k.startsWith("on."))
-          .map(([k, v]) => [k.substring("on.".length), v])
-      ),
+    resolvers: {
+      width,
+      height,
     },
-    type: "text",
-    create,
-    mount,
-    unmount,
-    render,
-  };
-});
+  })
+);
 
 export function Text(...args) {
   const parsedArgs =
@@ -170,7 +164,7 @@ export function render() {
     width,
     height,
     text,
-    fontFamily,
+    font,
     fontSize,
     lineHeight,
     style,
@@ -184,7 +178,7 @@ export function render() {
     width: `${width}px`,
     height: `${height}px`,
     transition: `all ease-in-out ${transitionTime || 200}ms`,
-    "font-family": fontFamily,
+    "font-family": font.fontFamily,
     "font-size": `${fontSize}px`,
     "line-height": `${lineHeight}px`,
   };

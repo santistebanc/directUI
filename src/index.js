@@ -1,20 +1,20 @@
 import { Box } from "./Components/Box";
-import { State, Store } from "./direct";
+import { Store } from "./direct";
 import { mountToDOM, padding, style, onEvent, Font } from "./dom";
 import { Text } from "./Components/Text";
 import { Input } from "./Components/Input";
 
-const font = Font("fonts/OpenSans-Regular.ttf");
+const font = Font("fonts/OpenSans-Regular.ttf", "Open Sans");
 
-// const title = Text(({ page }) => "hello world " + page(), { font });
+const title = (page) => Text("hello world " + page, {font: font()});
 
 const content = () => Text("this is the content of the page", { font: font() });
 
 const Kiste = Box({
   width: 100,
   height: 100,
-  ...style({ "background-color": "blue" }),
-  ...onEvent({ click: () => console.log("clicked") }),
+  "style.background-color": "lightblue",
+  "on.click": () => console.log("clicked"),
 });
 
 const input = () =>
@@ -27,6 +27,7 @@ const container = (page) =>
   Box(
     page % 2 === 1
       ? [
+          title(page),
           Text("test", {
             id: "waka",
             font: font(),

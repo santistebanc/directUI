@@ -1,9 +1,14 @@
 import Cached from "../Cache/Cached";
 import { Component } from "./Component";
-import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "../constants";
+import {
+  DEFAULT_FONT,
+  DEFAULT_FONT_SIZE,
+  DEFAULT_LINE_HEIGHT,
+} from "../constants";
 import { width as textWidth, height as textHeight } from "./Text";
-import { getStylesString, mapEntries } from "../utils";
+import { getStylesString, mapEntries, parsePrefixes } from "../utils";
 import { State } from "../direct";
+import { parseOutput } from "../dom";
 
 export const defaultProps = {
   index: 0,
@@ -13,7 +18,7 @@ export const defaultProps = {
   maxWidth: Infinity,
   x: 0,
   y: 0,
-  font: null,
+  font: DEFAULT_FONT,
   paddingLeft: 0,
   paddingTop: 0,
   paddingRight: 0,
@@ -38,36 +43,23 @@ export const height = Cached((props) => {
   return Math.min(maxHeight, Math.max(txtHeight, resHeight));
 });
 
-export const InputComponent = Component((atts) => {
-  const props = { ...defaultProps, ...atts };
-  return {
-    ...props,
-    width: width(props),
-    height: height(props),
-    fontFamily: props.font.fontFamily,
-    style: {
-      ...(props.style ?? {}),
-      ...Object.fromEntries(
-        Object.entries(props)
-          .filter(([k]) => k.startsWith("style."))
-          .map(([k, v]) => [k.substring("style.".length), v])
-      ),
+export const InputComponent = Component((atts) =>
+  parseOutput({
+    atts,
+    defaultProps,
+    compClass: InputComponent,
+    props: {
+      create,
+      mount,
+      unmount,
+      render,
     },
-    on: {
-      ...(props.on ?? {}),
-      ...Object.fromEntries(
-        Object.entries(props)
-          .filter(([k]) => k.startsWith("on."))
-          .map(([k, v]) => [k.substring("on.".length), v])
-      ),
+    resolvers: {
+      width,
+      height,
     },
-    type: "input",
-    create,
-    mount,
-    unmount,
-    render,
-  };
-});
+  })
+);
 
 export function Input(...args) {
   const parsedArgs =
@@ -112,7 +104,7 @@ export function render() {
     y,
     width,
     height,
-    fontFamily,
+    font,
     fontSize,
     lineHeight,
     style,
@@ -126,7 +118,7 @@ export function render() {
     width: `${width}px`,
     height: `${height}px`,
     transition: `all ease-in-out ${transitionTime || 200}ms`,
-    "font-family": fontFamily,
+    "font-family": font.fontFamily,
     "font-size": `${fontSize}px`,
     "line-height": `${lineHeight}px`,
   };

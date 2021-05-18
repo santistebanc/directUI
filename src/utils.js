@@ -5,6 +5,12 @@ export function clone(obj) {
   );
 }
 
+export function merge(...sources) {
+  return sources.reduce((result, source) =>
+    Object.defineProperties(result, Object.getOwnPropertyDescriptors(source))
+  );
+}
+
 export function isFunction(functionToCheck) {
   return (
     !!functionToCheck &&
@@ -52,39 +58,6 @@ export function gettersToObj(obj) {
   ]);
 }
 
-export function compsAreSame(a, b) {
-  return (
-    a === b ||
-    (typeof a.id !== "undefined" && a.id === b.id && a.type === b.type)
-  );
-}
-
-export function getDiff(prev, next) {
-  const pool = [...next];
-  const dif = [];
-  const added = [];
-  const removed = [];
-  const kept = [];
-
-  prev.forEach((prevIt) => {
-    const idx = pool.findIndex((nxt) => compsAreSame(nxt, prevIt));
-    const it = pool[idx];
-    if (idx > -1) {
-      dif.push([prevIt, 0]);
-      kept.push(prevIt);
-      pool.splice(idx, 1);
-    } else {
-      dif.push([prevIt, -1]);
-      removed.push(prevIt);
-    }
-  });
-  pool.forEach((it) => {
-    dif.push([it, 1]);
-    added.push(it);
-  });
-  return { dif, added, kept, removed };
-}
-
 export function serializeProps(props) {
   return mapEntries(props, ([k, v]) => [k, isFunction(v) ? v.toString() : v]);
 }
@@ -101,4 +74,26 @@ export function getStylesString(styles) {
     (str, [key, val]) => `${str}${key}: ${val};`,
     ""
   );
+}
+
+export function parsePrefixes(props, prefixes = []) {
+  return prefixes.reduce((obj, prefix) => {
+    const acc = { ...obj };
+    const pref = {
+      ...(obj[prefix] ?? {}),
+      ...Object.fromEntries(
+        Object.entries(obj)
+          .filter(([k]) => {
+            const found = k.startsWith(prefix + ".");
+            if (found) delete acc[k];
+            return found;
+          })
+          .map(([k, v]) => [k.substring(prefix.length + 1), v])
+      ),
+    };
+    return {
+      ...acc,
+      [prefix]: pref,
+    };
+  }, props);
 }

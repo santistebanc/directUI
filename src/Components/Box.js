@@ -1,7 +1,12 @@
 import Cached from "../Cache/Cached";
 import Collection from "../Cache/Collection";
 import { Component } from "./Component";
-import { ensureArray, getStylesString, mapEntries } from "../utils";
+import {
+  ensureArray,
+  getStylesString,
+  mapEntries,
+} from "../utils";
+import { parseOutput } from "../dom";
 
 export const defaultProps = {
   index: 0,
@@ -159,44 +164,29 @@ export const height = Cached((props) => {
   );
 });
 
-export const BoxComponent = Component((atts) => {
-  const props = { ...defaultProps, ...atts };
-  return {
-    ...props,
-    width: width(props),
-    height: height(props),
-    children: children(props),
-    style: {
-      ...(props.style ?? {}),
-      ...Object.fromEntries(
-        Object.entries(props)
-          .filter(([k]) => k.startsWith("style."))
-          .map(([k, v]) => [k.substring("style.".length), v])
-      ),
+export const BoxComponent = Component((atts) =>
+  parseOutput({
+    atts,
+    defaultProps,
+    compClass: BoxComponent,
+    props: {
+      create,
+      mount,
+      unmount,
+      render,
     },
-    on: {
-      ...(props.on ?? {}),
-      ...Object.fromEntries(
-        Object.entries(props)
-          .filter(([k]) => k.startsWith("on."))
-          .map(([k, v]) => [k.substring("on.".length), v])
-      ),
+    resolvers: {
+      width,
+      height,
+      children,
     },
-    type: "box",
-    create,
-    mount,
-    unmount,
-    render,
-  };
-});
+  })
+);
 
 const childrenCollection = Collection();
 
 export function ch(obj) {
-  return childrenCollection.getOrAdd(obj, (idd) => {
-    console.log("created new children collection", idd);
-    return obj;
-  });
+  return childrenCollection.getOrAdd(obj, () => obj);
 }
 
 export function Box(...args) {

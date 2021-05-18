@@ -1,5 +1,5 @@
 import { Auto, State } from "./direct";
-import { ensureArray, mapEntries } from "./utils";
+import { defineGetters, ensureArray, mapEntries, parsePrefixes } from "./utils";
 import opentype from "opentype.js";
 
 export function mountToDOM(
@@ -12,6 +12,15 @@ export function mountToDOM(
   styleEl.appendChild(document.createTextNode(initialStyles));
   document.head.appendChild(styleEl);
   const sheet = styleEl.sheet;
+
+  sheet.insertRule(`
+  input:focus,
+  select:focus,
+  textarea:focus,
+  button:focus {
+      outline: none;
+  }
+  `);
 
   sheet.insertRule(
     `
@@ -33,7 +42,6 @@ export function mountToDOM(
     -moz-box-shadow: none;
     box-shadow: none;
     resize: none;
-    }
     `
   );
 
@@ -111,7 +119,9 @@ export function mountToDOM(
 }
 
 function getKeys(comp) {
-  return comp.id ? { id: comp.id, type: comp.type } : { type: comp.type };
+  return comp.id
+    ? { id: comp.id, compClass: comp.compClass }
+    : { compClass: comp.compClass };
 }
 
 function sameComps(c1, c2) {
@@ -153,18 +163,33 @@ export function padding(...args) {
   return Object.fromEntries(values.map((x, i) => [keys[i], parts[x]]));
 }
 
-export function Font(
-  src,
-  fontFamily = "Courier New",
-  getWidth = (text, fontSize) => (text.length * (fontSize * 1229)) / 2048
-) {
-  const font = State({ src, fontFamily, getWidth });
+export function Font(src, fontFamily) {
+  const font = State({ src, fontFamily, loading: true });
   opentype.load(src).then((res) =>
     font.set({
+      loading: false,
       src,
       fontFamily,
       getWidth: (text, fontSize) => res.getAdvanceWidth(text, fontSize),
     })
   );
   return font;
+}
+
+export function parseOutput({
+  atts,
+  defaultProps,
+  props,
+  resolvers,
+  compClass,
+}) {
+  const mergedAtts = { ...defaultProps, ...atts };
+  const parsedPrefixes = parsePrefixes(mergedAtts, ["style", "on"]);
+  const output = {
+    ...parsedPrefixes,
+    ...props,
+    compClass,
+  };
+  defineGetters(output, resolvers, (func) => func(mergedAtts));
+  return output;
 }
