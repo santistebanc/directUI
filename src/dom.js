@@ -1,6 +1,8 @@
 import { Auto, State } from "./direct";
 import { defineGetters, ensureArray, mapEntries, parsePrefixes } from "./utils";
 import opentype from "opentype.js";
+import normalize from "./normalize";
+import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
 
 export function mountToDOM(
   renderFunc,
@@ -9,39 +11,29 @@ export function mountToDOM(
   const base = document.querySelector(selector);
   //create <style> element in <head> for global styles
   const styleEl = document.createElement("style");
-  styleEl.appendChild(document.createTextNode(initialStyles));
+  styleEl.appendChild(document.createTextNode(normalize.concat(initialStyles)));
   document.head.appendChild(styleEl);
   const sheet = styleEl.sheet;
 
-  sheet.insertRule(`
-  input:focus,
-  select:focus,
-  textarea:focus,
-  button:focus {
-      outline: none;
-  }
-  `);
+  sheet.insertRule(
+    `
+    ${selector}
+    {
+    overflow: hidden;
+    font-family: "Courier New";
+    font-size: ${DEFAULT_FONT_SIZE}px;
+    line-height: ${DEFAULT_LINE_HEIGHT}px;
+    `
+  );
 
   sheet.insertRule(
     `
     ${selector}, ${selector} *
     {
-    overflow: hidden;
     padding: 0;
     margin: 0;
     will-change: transform, opacity;
-    font-family: "Courier New";
-    font-size: 14px;
-    font-kerning: none;
-    line-height: 16px;
     position: absolute;
-    border: none;
-    background-image: none;
-    background-color: transparent;
-    -webkit-box-shadow: none;
-    -moz-box-shadow: none;
-    box-shadow: none;
-    resize: none;
     `
   );
 
@@ -120,8 +112,8 @@ export function mountToDOM(
 
 function getKeys(comp) {
   return comp.id
-    ? { id: comp.id, compClass: comp.compClass }
-    : { compClass: comp.compClass };
+    ? { id: comp.id, output: comp.output }
+    : { output: comp.output };
 }
 
 function sameComps(c1, c2) {
@@ -176,20 +168,13 @@ export function Font(src, fontFamily) {
   return font;
 }
 
-export function parseOutput({
-  atts,
-  defaultProps,
-  props,
-  resolvers,
-  compClass,
-}) {
+export function parseOutput({ atts, defaultProps, props, resolvers }) {
   const mergedAtts = { ...defaultProps, ...atts };
   const parsedPrefixes = parsePrefixes(mergedAtts, ["style", "on"]);
   const output = {
     ...parsedPrefixes,
     ...props,
-    compClass,
   };
-  defineGetters(output, resolvers, (func) => func(mergedAtts));
+  defineGetters(output, resolvers, (func) => func(atts));
   return output;
 }

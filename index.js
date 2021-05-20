@@ -1,12 +1,12 @@
-import { Box } from "./Components/Box";
-import { Store } from "./direct";
-import { mountToDOM, padding, style, onEvent, Font } from "./dom";
-import { Text } from "./Components/Text";
-import { Input } from "./Components/Input";
+import { Box } from "./src/Components/Box";
+import { Store } from "./src/direct";
+import { mountToDOM, padding, style, onEvent, Font } from "./src/dom";
+import { Text } from "./src/Components/Text";
+import { Input } from "./src/Components/Input";
 
-const font = Font("fonts/OpenSans-Regular.ttf", "Open Sans");
+const font = Font("./src/fonts/OpenSans-Regular.ttf", "Open Sans");
 
-const title = (page) => Text("hello world " + page, {font: font()});
+// const title = (page) => Text("hello world " + page, { font: font() });
 
 const content = () => Text("this is the content of the page", { font: font() });
 
@@ -27,7 +27,6 @@ const container = (page) =>
   Box(
     page % 2 === 1
       ? [
-          title(page),
           Text("test", {
             id: "waka",
             font: font(),
@@ -85,9 +84,24 @@ const app = mountToDOM(
 );
 
 // const app = mountToDOM(
-//   base,
-//   () => Text("hello world", { font: font(), ...style({ "font-weight": "bold" }) })
+//   () =>
+//     font().loading
+//       ? []
+//       : Box(
+//           store.page() % 3 !== 0
+//             ? [
+//                 Box(
+//                   store.page() % 2 === 1
+//                     ? [Text("hello", { font: font() })]
+//                     : [Text("world")]
+//                 ),
+//               ]
+//             : [Text("nope")]
+//         ),
+//   { font: font() }
 // );
+
+// const app = mountToDOM(() => Text("hello", { font: font() }), { font: font() });
 
 console.log(app);
 

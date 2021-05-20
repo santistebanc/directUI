@@ -1,7 +1,8 @@
+import { removeUndefinedPadding } from "../utils";
 import Memo from "./Memo";
 
-export default function Collection(initialKeys = []) {
-  const memo = Memo();
+export default function Collection(initialKeys = [], { name }) {
+  const memo = Memo({ name });
   const keys = [...initialKeys];
   const idKey = (id) => {
     const keyArr = [];
@@ -14,7 +15,7 @@ export default function Collection(initialKeys = []) {
         keyArr[idx] = v;
       }
     });
-    return keyArr;
+    return removeUndefinedPadding(keyArr);
   };
 
   return {

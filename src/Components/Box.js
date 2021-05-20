@@ -1,11 +1,7 @@
-import Cached from "../Cache/Cached";
-import Collection from "../Cache/Collection";
+import Cached from "../Memo/Cached";
+import Collection from "../Memo/Collection";
 import { Component } from "./Component";
-import {
-  ensureArray,
-  getStylesString,
-  mapEntries,
-} from "../utils";
+import { ensureArray, getStylesString, mapEntries } from "../utils";
 import { parseOutput } from "../dom";
 
 export const defaultProps = {
@@ -122,68 +118,82 @@ export const getDimensions = Cached(
       };
     }
   },
-  { name: "dims" }
+  { childIndex: 0, ...defaultProps },
+  { name: "getDimensions" }
 );
 
-export const children = Cached((props) => {
-  const { children } = props;
-  return children.map((child, index) => {
-    const dimensions = getDimensions({ ...props, childIndex: index });
+export const children = Cached(
+  (props) => {
+    const { children } = props;
+    return children.map((child, index) => {
+      const dimensions = getDimensions({ ...props, childIndex: index });
 
-    const propsToPassDown = {
-      maxWidth: dimensions.itemWidth,
-      maxHeight: dimensions.itemHeight,
-      x: dimensions.itemX,
-      y: dimensions.itemY,
-      index,
-    };
+      const propsToPassDown = {
+        maxWidth: dimensions.itemWidth,
+        maxHeight: dimensions.itemHeight,
+        x: dimensions.itemX,
+        y: dimensions.itemY,
+        index,
+      };
 
-    return child(propsToPassDown);
-  });
-});
-
-export const width = Cached((props) => {
-  const { children, width } = props;
-  return (
-    width ??
-    (children.length
-      ? getDimensions({ ...props, childIndex: children.length - 1 })
-          .containerWidth
-      : 0)
-  );
-});
-
-export const height = Cached((props) => {
-  const { children, height } = props;
-  return (
-    height ??
-    (children.length
-      ? getDimensions({ ...props, childIndex: children.length - 1 })
-          .containerHeight
-      : 0)
-  );
-});
-
-export const BoxComponent = Component((atts) =>
-  parseOutput({
-    atts,
-    defaultProps,
-    compClass: BoxComponent,
-    props: {
-      create,
-      mount,
-      unmount,
-      render,
-    },
-    resolvers: {
-      width,
-      height,
-      children,
-    },
-  })
+      return child(propsToPassDown);
+    });
+  },
+  defaultProps,
+  { name: "box_children" }
 );
 
-const childrenCollection = Collection();
+export const width = Cached(
+  (props) => {
+    const { children, width } = props;
+    return (
+      width ??
+      (children.length
+        ? getDimensions({ ...props, childIndex: children.length - 1 })
+            .containerWidth
+        : 0)
+    );
+  },
+  defaultProps,
+  { name: "box_width" }
+);
+
+export const height = Cached(
+  (props) => {
+    const { children, height } = props;
+    return (
+      height ??
+      (children.length
+        ? getDimensions({ ...props, childIndex: children.length - 1 })
+            .containerHeight
+        : 0)
+    );
+  },
+  defaultProps,
+  { name: "box_height" }
+);
+
+export const BoxComponent = Component(
+  (atts) =>
+    parseOutput({
+      atts,
+      defaultProps,
+      props: {
+        create,
+        mount,
+        unmount,
+        render,
+      },
+      resolvers: {
+        width,
+        height,
+        children,
+      },
+    }),
+  { name: "box" }
+);
+
+const childrenCollection = Collection([], { name: "childrenCollection" });
 
 export function ch(obj) {
   return childrenCollection.getOrAdd(obj, () => obj);
@@ -214,9 +224,10 @@ export function create() {
   return el;
 }
 
+const exitTimeout = Symbol();
 export function mount(base) {
   const el = this.el;
-  if (this.exitTimeout) clearTimeout(this.exitTimeout);
+  if (this[exitTimeout]) clearTimeout(this[exitTimeout]);
   el.style.opacity = "0";
   setTimeout(() => (el.style.opacity = "1"), 0);
   base.appendChild(el);
@@ -225,7 +236,7 @@ export function mount(base) {
 export function unmount() {
   const el = this.el;
   el.style.opacity = "0";
-  this.exitTimeout = setTimeout(() => {
+  this[exitTimeout] = setTimeout(() => {
     el.remove();
   }, this.transitionTime || 200);
 }

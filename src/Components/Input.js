@@ -1,4 +1,4 @@
-import Cached from "../Cache/Cached";
+import Cached from "../Memo/Cached";
 import { Component } from "./Component";
 import {
   DEFAULT_FONT,
@@ -29,36 +29,46 @@ export const defaultProps = {
   expandY: false,
 };
 
-export const width = Cached((props) => {
-  const { width, maxWidth, expandX } = props;
-  const txtWidth = textWidth(props);
-  const resWidth = width != null ? width : expandX ? maxWidth : txtWidth;
-  return Math.min(maxWidth, Math.max(txtWidth, resWidth));
-});
+export const width = Cached(
+  (props) => {
+    const { width, maxWidth, expandX } = props;
+    const txtWidth = textWidth(props);
+    const resWidth = width != null ? width : expandX ? maxWidth : txtWidth;
+    return Math.min(maxWidth, Math.max(txtWidth, resWidth));
+  },
+  defaultProps,
+  { name: "input_width" }
+);
 
-export const height = Cached((props) => {
-  const { height, maxHeight, lineHeight, expandY } = props;
-  const txtHeight = textHeight(props);
-  const resHeight = height != null ? height : expandY ? maxHeight : lineHeight;
-  return Math.min(maxHeight, Math.max(txtHeight, resHeight));
-});
+export const height = Cached(
+  (props) => {
+    const { height, maxHeight, lineHeight, expandY } = props;
+    const txtHeight = textHeight(props);
+    const resHeight =
+      height != null ? height : expandY ? maxHeight : lineHeight;
+    return Math.min(maxHeight, Math.max(txtHeight, resHeight));
+  },
+  defaultProps,
+  { name: "input_height" }
+);
 
-export const InputComponent = Component((atts) =>
-  parseOutput({
-    atts,
-    defaultProps,
-    compClass: InputComponent,
-    props: {
-      create,
-      mount,
-      unmount,
-      render,
-    },
-    resolvers: {
-      width,
-      height,
-    },
-  })
+export const InputComponent = Component(
+  (atts) =>
+    parseOutput({
+      atts,
+      defaultProps,
+      props: {
+        create,
+        mount,
+        unmount,
+        render,
+      },
+      resolvers: {
+        width,
+        height,
+      },
+    }),
+  { name: "input" }
 );
 
 export function Input(...args) {
@@ -81,9 +91,10 @@ export function create() {
   return el;
 }
 
+const exitTimeout = Symbol();
 export function mount(parentEl) {
   const el = this.el;
-  if (this.exitTimeout) clearTimeout(this.exitTimeout);
+  if (this[exitTimeout]) clearTimeout(this[exitTimeout]);
   el.style.opacity = "0";
   setTimeout(() => (el.style.opacity = "1"), 0);
   parentEl.appendChild(el);
@@ -92,7 +103,7 @@ export function mount(parentEl) {
 export function unmount() {
   const el = this.el;
   el.style.opacity = "0";
-  this.exitTimeout = setTimeout(() => {
+  this[exitTimeout] = setTimeout(() => {
     el.remove();
   }, this.transitionTime || 200);
 }
