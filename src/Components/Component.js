@@ -12,37 +12,26 @@ function getCollection(output, name) {
         .get(output);
 }
 
-export function Component(output, { name }) {
-  return (attributes = {}) => {
-    const currOutput = attributes.output ?? output;
-    const atts = { ...attributes };
-    delete atts.output;
-    const collection = getCollection(currOutput, name);
-    return collection.getOrAdd(atts, () =>
-      comp({ ...atts, output: currOutput })
-    );
-  };
+export function Component(output, { name } = {}) {
+  const collection = getCollection(output, name);
+  const comp = UncachedComp(output);
+  return (attributes = {}) =>
+    collection.getOrAdd(attributes, () => comp(attributes));
 }
 
-function comp(...args) {
+export function UncachedComp(output) {
   function init(attributes = {}) {
-    const output = attributes.output;
-    const atts = { ...attributes };
-    delete atts.output;
+    const atts = Object.freeze({ ...attributes });
     function component(input) {
-      return init(
-        merge({}, { ...atts, output }, isFunction(input) ? input(atts) : input)
-      );
+      return init(merge({}, atts, isFunction(input) ? input(atts) : input));
     }
-    if (output) {
-      Object.defineProperty(component, "output", {
-        configurable: true,
-        enumerable: false,
-        value: output,
-      });
-      merge(component, isFunction(output) ? output(atts) : output);
-    }
-    return component;
+    Object.defineProperty(component, "output", {
+      configurable: true,
+      enumerable: false,
+      value: output,
+    });
+    merge(component, isFunction(output) ? output(atts) : output);
+    return Object.freeze(component);
   }
-  return init(...args);
+  return init();
 }

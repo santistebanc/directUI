@@ -1,8 +1,7 @@
 import { Auto, State } from "./direct";
 import { defineGetters, ensureArray, mapEntries, parsePrefixes } from "./utils";
 import opentype from "opentype.js";
-import normalize from "./normalize";
-import { DEFAULT_FONT_SIZE, DEFAULT_LINE_HEIGHT } from "./constants";
+import reset from "./reset";
 
 export function mountToDOM(
   renderFunc,
@@ -11,44 +10,25 @@ export function mountToDOM(
   const base = document.querySelector(selector);
   //create <style> element in <head> for global styles
   const styleEl = document.createElement("style");
-  styleEl.appendChild(document.createTextNode(normalize.concat(initialStyles)));
+  styleEl.appendChild(
+    document.createTextNode(reset(selector).concat(initialStyles))
+  );
   document.head.appendChild(styleEl);
   const sheet = styleEl.sheet;
 
-  sheet.insertRule(
-    `
-    ${selector}
-    {
-    overflow: hidden;
-    font-family: "Courier New";
-    font-size: ${DEFAULT_FONT_SIZE}px;
-    line-height: ${DEFAULT_LINE_HEIGHT}px;
-    `
-  );
-
-  sheet.insertRule(
-    `
-    ${selector}, ${selector} *
-    {
-    padding: 0;
-    margin: 0;
-    will-change: transform, opacity;
-    position: absolute;
-    `
-  );
-
   const root = { el: base, sheet, children: [] };
-
+  
   if (font) {
     sheet.insertRule(`
       @font-face {
-        font-family: "${font.fontFamily}";
-        src: url("${font.src}");
+        font-family: "${font().fontFamily}";
+        src: url("${font().src}");
       }
     `);
   }
 
   Auto(() => {
+    if (font && font().loading) return;
     const comps = ensureArray(renderFunc());
     mountChildren(root, comps);
   });

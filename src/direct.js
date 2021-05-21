@@ -3,6 +3,8 @@ import { isFunction, mapEntries } from "./utils";
 export let autos = new Set();
 export let statePending = null;
 
+const STATE = Symbol("State");
+
 export function Auto(func, nm) {
   const track = (who) => {
     autos.add(track);
@@ -51,7 +53,7 @@ export function State(initialValue) {
     }
     return get.value;
   };
-  get.isState = true;
+  get[STATE] = true;
   return get;
 }
 
@@ -88,3 +90,7 @@ State.transaction = (func) => {
   statePending = null;
   return output;
 };
+
+export function isState(obj) {
+  return obj[STATE];
+}

@@ -205,16 +205,16 @@ export function render() {
   } = this.comp;
 
   const styles = {
-    ...style,
     opacity: `${el.style.opacity}`,
     transform: `translate(${x}px,${y}px)`,
     width: `${width}px`,
     height: `${height}px`,
-    "overflow": "hidden",
+    overflow: "hidden",
     transition: `all ease-in-out ${transitionTime || 200}ms, height 0s`,
     "font-family": font.fontFamily,
     "font-size": `${fontSize}px`,
     "line-height": `${lineHeight}px`,
+    ...style,
   };
 
   el.style.cssText = getStylesString(styles);

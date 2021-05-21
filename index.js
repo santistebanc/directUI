@@ -1,10 +1,15 @@
 import { Box } from "./src/Components/Box";
-import { Store } from "./src/direct";
+import { State, Store } from "./src/direct";
 import { mountToDOM, padding, style, onEvent, Font } from "./src/dom";
 import { Text } from "./src/Components/Text";
 import { Input } from "./src/Components/Input";
+import { Component } from "./src/Components/Component";
 
 const font = Font("./src/fonts/OpenSans-Regular.ttf", "Open Sans");
+
+const texto = State("iiii");
+
+const Comp = Component({ ...Text("works!") });
 
 // const title = (page) => Text("hello world " + page, { font: font() });
 
@@ -19,14 +24,16 @@ const Kiste = Box({
 
 const input = () =>
   Input({
-    text: "initial",
+    text: texto(),
     font: font(),
+    "on.input": (e) => texto.set(e.target.value),
   });
 
 const container = (page) =>
   Box(
     page % 2 === 1
       ? [
+          Comp(),
           Text("test", {
             id: "waka",
             font: font(),
@@ -80,7 +87,7 @@ const app = mountToDOM(
       screenHeight: store.screenHeight(),
       screenWidth: store.screenWidth(),
     }),
-  { font: font() }
+  { font }
 );
 
 // const app = mountToDOM(

@@ -55,7 +55,7 @@ export default function Memo({ limit = 100, name } = {}) {
         if (iter instanceof Map) count++;
         highestCount = Math.max(highestCount, count);
 
-        console.log("new cache [", name, "] ", highestCount, keys);
+        // console.log("new cache [", name, "] ", highestCount, keys);
 
         return val;
       }
@@ -75,12 +75,12 @@ export default function Memo({ limit = 100, name } = {}) {
       const key = keys[i];
       const currentVal = iter.get(key);
       if (i === keys.length - 1) {
-        if (!isMap(currentVal)) {
-          iter.delete(key);
-        } else {
-          currentVal.delete(RESULT);
-        }
         count--;
+        if (!isMap(currentVal)) {
+          return iter.delete(key);
+        } else {
+          return currentVal.delete(RESULT);
+        }
       }
       iter = iter.get(key);
     }

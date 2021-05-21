@@ -246,12 +246,12 @@ export function render() {
   const { x, y, width, height, style, transitionTime } = this.comp;
 
   const styles = {
-    ...style,
     opacity: `${el.style.opacity}`,
     transform: `translate(${x}px,${y}px)`,
     width: `${width}px`,
     height: `${height}px`,
     transition: `all ease-in-out ${transitionTime || 200}ms`,
+    ...style,
   };
 
   el.style.cssText = getStylesString(styles);

@@ -11,6 +11,7 @@ import { State } from "../direct";
 import { parseOutput } from "../dom";
 
 export const defaultProps = {
+  text: "",
   index: 0,
   fontSize: DEFAULT_FONT_SIZE,
   lineHeight: DEFAULT_LINE_HEIGHT,
@@ -81,13 +82,14 @@ export function Input(...args) {
 
 export function create() {
   const { text, on } = this.comp;
-  this.text = State(text ?? "");
   const el = document.createElement("input");
   this.eventListeners = mapEntries(on, ([k, v]) => [
     k,
     el.addEventListener(k, v),
   ]);
-  el.oninput = (e) => this.text.set(e.target.value);
+  this.userText = text;
+  this.text = text;
+  el.oninput = (e) => (this.text = e.target.value);
   return el;
 }
 
@@ -113,6 +115,7 @@ export function render() {
   const {
     x,
     y,
+    text,
     width,
     height,
     font,
@@ -123,7 +126,6 @@ export function render() {
   } = this.comp;
 
   const styles = {
-    ...style,
     opacity: `${el.style.opacity}`,
     transform: `translate(${x}px,${y}px)`,
     width: `${width}px`,
@@ -132,8 +134,13 @@ export function render() {
     "font-family": font.fontFamily,
     "font-size": `${fontSize}px`,
     "line-height": `${lineHeight}px`,
+    ...style,
   };
 
   el.style.cssText = getStylesString(styles);
-  if (typeof this.text !== "undefined") el.value = this.text();
+  if (text !== this.userText) {
+    this.userText = text;
+    this.text = text;
+  }
+  el.value = this.text;
 }
