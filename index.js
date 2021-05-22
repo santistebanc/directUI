@@ -9,8 +9,6 @@ const font = Font("./src/fonts/OpenSans-Regular.ttf", "Open Sans");
 
 const texto = State("iiii");
 
-const Comp = Component({ ...Text("works!") });
-
 // const title = (page) => Text("hello world " + page, { font: font() });
 
 const content = () => Text("this is the content of the page", { font: font() });
@@ -33,7 +31,6 @@ const container = (page) =>
   Box(
     page % 2 === 1
       ? [
-          Comp(),
           Text("test", {
             id: "waka",
             font: font(),
@@ -92,23 +89,21 @@ const app = mountToDOM(
 
 // const app = mountToDOM(
 //   () =>
-//     font().loading
-//       ? []
-//       : Box(
-//           store.page() % 3 !== 0
-//             ? [
-//                 Box(
-//                   store.page() % 2 === 1
-//                     ? [Text("hello", { font: font() })]
-//                     : [Text("world")]
-//                 ),
-//               ]
-//             : [Text("nope")]
-//         ),
+//     Box(
+//       store.page() % 3 !== 0
+//         ? [
+//             Box(
+//               store.page() % 2 === 1
+//                 ? [Text("hello", { font: font() })]
+//                 : [Text("world")]
+//             ),
+//           ]
+//         : [Text("nope")]
+//     ),
 //   { font: font() }
 // );
 
-// const app = mountToDOM(() => Text("hello", { font: font() }), { font: font() });
+// const app = mountToDOM(() => Text("hello"));
 
 console.log(app);
 

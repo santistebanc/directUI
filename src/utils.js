@@ -76,26 +76,12 @@ export function getStylesString(styles) {
   );
 }
 
-export function parsePrefixes(props, prefixes = []) {
-  return prefixes.reduce((obj, prefix) => {
-    const acc = { ...obj };
-    const pref = {
-      ...(obj[prefix] ?? {}),
-      ...Object.fromEntries(
-        Object.entries(obj)
-          .filter(([k]) => {
-            const found = k.startsWith(prefix + ".");
-            if (found) delete acc[k];
-            return found;
-          })
-          .map(([k, v]) => [k.substring(prefix.length + 1), v])
-      ),
-    };
-    return {
-      ...acc,
-      [prefix]: pref,
-    };
-  }, props);
+export function parsePrefix(props, prefix) {
+  return Object.fromEntries(
+    Object.entries(props)
+      .filter(([k]) => k.startsWith(prefix + "."))
+      .map(([k, v]) => [k.substring(prefix.length + 1), v])
+  );
 }
 
 export function removeUndefinedPadding(arr) {
@@ -107,7 +93,24 @@ export function removeUndefinedPadding(arr) {
   return arr;
 }
 
-
 export function assert(func) {
   console.assert(func(), { func });
+}
+
+export function resolveThunk(args) {
+  return (obj) => (isFunction(obj) ? obj(args) : obj);
+}
+
+export function setHiddenProperty(obj, prop, value, desc = {}) {
+  return Object.defineProperty(obj, prop, {
+    enumerable: false,
+    configurable: true,
+    writable: false,
+    value,
+    ...desc,
+  });
+}
+
+export function filter(obj, func) {
+  return Object.fromEntries(Object.entries(obj).filter(([k, v]) => func(v)));
 }

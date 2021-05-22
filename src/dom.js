@@ -1,5 +1,5 @@
 import { Auto, State } from "./direct";
-import { defineGetters, ensureArray, mapEntries, parsePrefixes } from "./utils";
+import { ensureArray, mapEntries, parsePrefix } from "./utils";
 import opentype from "opentype.js";
 import reset from "./reset";
 
@@ -17,7 +17,7 @@ export function mountToDOM(
   const sheet = styleEl.sheet;
 
   const root = { el: base, sheet, children: [] };
-  
+
   if (font) {
     sheet.insertRule(`
       @font-face {
@@ -148,13 +148,10 @@ export function Font(src, fontFamily) {
   return font;
 }
 
-export function parseOutput({ atts, defaultProps, props, resolvers }) {
-  const mergedAtts = { ...defaultProps, ...atts };
-  const parsedPrefixes = parsePrefixes(mergedAtts, ["style", "on"]);
-  const output = {
-    ...parsedPrefixes,
-    ...props,
-  };
-  defineGetters(output, resolvers, (func) => func(atts));
-  return output;
+export function useDOMEventListeners(atts) {
+  return { on: parsePrefix(atts, "on") };
+}
+
+export function useStyle(atts) {
+  return { style: parsePrefix(atts, "style") };
 }

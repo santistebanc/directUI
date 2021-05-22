@@ -2,7 +2,7 @@ import Cached from "../Memo/Cached";
 import Collection from "../Memo/Collection";
 import { Component } from "./Component";
 import { ensureArray, getStylesString, mapEntries } from "../utils";
-import { parseOutput } from "../dom";
+import { useDOMEventListeners, useStyle } from "../dom";
 
 export const defaultProps = {
   index: 0,
@@ -174,24 +174,21 @@ export const height = Cached(
 );
 
 export const BoxComponent = Component(
-  (atts) =>
-    parseOutput({
-      atts,
-      defaultProps,
-      props: {
-        create,
-        mount,
-        unmount,
-        render,
-      },
-      resolvers: {
-        width,
-        height,
-        children,
-      },
-    }),
-  { name: "box" }
-);
+  useDOMEventListeners,
+  useStyle,
+  {
+    create,
+    mount,
+    unmount,
+    render,
+  },
+  (atts) => ({
+    ...atts,
+    width: width(atts),
+    height: height(atts),
+    children: children(atts),
+  })
+)(defaultProps);
 
 const childrenCollection = Collection([], { name: "childrenCollection" });
 

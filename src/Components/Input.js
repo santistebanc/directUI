@@ -6,11 +6,11 @@ import {
   DEFAULT_LINE_HEIGHT,
 } from "../constants";
 import { width as textWidth, height as textHeight } from "./Text";
-import { getStylesString, mapEntries, parsePrefixes } from "../utils";
-import { State } from "../direct";
-import { parseOutput } from "../dom";
+import { getStylesString, mapEntries } from "../utils";
+import { useDOMEventListeners, useStyle } from "../dom";
 
 export const defaultProps = {
+  name: "input",
   text: "",
   index: 0,
   fontSize: DEFAULT_FONT_SIZE,
@@ -54,23 +54,20 @@ export const height = Cached(
 );
 
 export const InputComponent = Component(
-  (atts) =>
-    parseOutput({
-      atts,
-      defaultProps,
-      props: {
-        create,
-        mount,
-        unmount,
-        render,
-      },
-      resolvers: {
-        width,
-        height,
-      },
-    }),
-  { name: "input" }
-);
+  useDOMEventListeners,
+  useStyle,
+  {
+    create,
+    mount,
+    unmount,
+    render,
+  },
+  (atts) => ({
+    ...atts,
+    width: width(atts),
+    height: height(atts),
+  })
+)(defaultProps);
 
 export function Input(...args) {
   const parsedArgs =

@@ -1,37 +1,34 @@
 import Collection from "../Memo/Collection";
-import { clone, merge } from "../utils";
-import { isFunction } from "../utils";
+import { isFunction, merge, resolveThunk, setHiddenProperty } from "../utils";
 
-const types = new Map();
+const types = new WeakMap();
 
-function getCollection(output, name) {
-  return types.has(output)
-    ? types.get(output)
-    : types
-        .set(output, Collection([], { name: "component-" + name }))
-        .get(output);
+function getCollection(type, name) {
+  return types.has(type)
+    ? types.get(type)
+    : types.set(type, Collection([], { name: "component-" + name })).get(type);
 }
 
-export function Component(output, { name } = {}) {
-  const collection = getCollection(output, name);
-  const comp = UncachedComp(output);
-  return (attributes = {}) =>
-    collection.getOrAdd(attributes, () => comp(attributes));
-}
+export function Component(...output) {
+  const init = (...args) => {
+    const input = merge({}, ...args.map(resolveThunk({})))
+    const resolvedOutput = merge({}, ...output.map(resolveThunk(input)));
+    const collection = getCollection(resolvedOutput, input.name);
 
-export function UncachedComp(output) {
-  function init(attributes = {}) {
-    const atts = Object.freeze({ ...attributes });
-    function component(input) {
-      return init(merge({}, atts, isFunction(input) ? input(atts) : input));
-    }
-    Object.defineProperty(component, "output", {
-      configurable: true,
-      enumerable: false,
-      value: output,
+    return collection.getOrAdd(collection, () => {
+      function component(...args) {
+        const attributes = merge({}, input, ...args.map(resolveThunk(input)));
+        return init(attributes);
+      }
+      merge(component, init, resolvedOutput);
+      return component;
     });
-    merge(component, isFunction(output) ? output(atts) : output);
-    return Object.freeze(component);
-  }
-  return init();
+  };
+  const resolvedOutput = merge({}, ...output.filter((out) => !isFunction(out)));
+  setHiddenProperty(init, "output", output);
+  setHiddenProperty(init, "extend", (...args) =>
+    Component(...output, ...args)
+  );
+  merge(init, resolvedOutput);
+  return init;
 }

@@ -5,10 +5,11 @@ import {
   DEFAULT_FONT_SIZE,
   DEFAULT_LINE_HEIGHT,
 } from "../constants";
-import { getStylesString, mapEntries, parsePrefixes } from "../utils";
-import { parseOutput } from "../dom";
+import { getStylesString, mapEntries } from "../utils";
+import { useDOMEventListeners, useStyle } from "../dom";
 
 export const defaultProps = {
+  name: "text",
   index: 0,
   text: "",
   fontSize: DEFAULT_FONT_SIZE,
@@ -31,14 +32,9 @@ export const getCharWidth = Cached(
 
 export const getStringWidth = Cached(
   ({ text, fontSize, font }) =>
-    !text?.length
-      ? 0
-      : text
-          .split("")
-          .reduce(
-            (sum, char) => sum + getCharWidth({ char, fontSize, font }),
-            0
-          ),
+    text
+      .split("")
+      .reduce((sum, char) => sum + getCharWidth({ char, fontSize, font }), 0),
   defaultProps,
   { name: "getStringWidth" }
 );
@@ -47,7 +43,7 @@ export const getWords = Cached(
   ({ text, fontSize, font }) => {
     const spaceWidth = getStringWidth({ text: " ", fontSize, font });
     let widthSoFar = 0;
-    return (text ?? "").split(" ").map((wordText, i) => {
+    return text.split(" ").map((wordText, i) => {
       const wordWidth = getStringWidth({ text: wordText, fontSize, font });
       widthSoFar += wordWidth + (i > 0 ? spaceWidth : 0);
       return { wordText, wordWidth, widthSoFar };
@@ -61,7 +57,7 @@ export const getLines = Cached(
   (props) => {
     const { text, fontSize, font } = props;
 
-    if (!text?.length) return 0;
+    if (!text.length) return 0;
 
     const spaceWidth = getStringWidth({ text: " ", fontSize, font });
     const availableWidth = getMaxWidth(props);
@@ -134,29 +130,20 @@ export const height = Cached(
 );
 
 export const TextComponent = Component(
-  (atts) =>
-    parseOutput({
-      atts,
-      defaultProps,
-      props: {
-        create,
-        mount,
-        unmount,
-        render,
-      },
-      resolvers: {
-        width,
-        height,
-      },
-    }),
-  { name: "text" }
-);
+  useDOMEventListeners,
+  useStyle,
+  {
+    create,
+    mount,
+    unmount,
+    render,
+  },
+  (atts) => ({ ...atts, width: width(atts), height: height(atts) })
+)(defaultProps);
 
 export function Text(...args) {
   const parsedArgs =
-    typeof args[0] === "object"
-      ? { ...args[0], text: args[0] ?? "" }
-      : { text: args[0], ...args[1] };
+    typeof args[0] === "object" ? args[0] : { text: args[0] ?? "", ...args[1] };
   return TextComponent(parsedArgs);
 }
 
