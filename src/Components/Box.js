@@ -2,7 +2,7 @@ import Cached from "../Memo/Cached";
 import Collection from "../Memo/Collection";
 import { Component } from "./Component";
 import { ensureArray, getStylesString, mapEntries } from "../utils";
-import { useDOMEventListeners, useStyle } from "../dom";
+import { withDOMEventListeners, withStyle } from "../dom";
 
 export const defaultProps = {
   index: 0,
@@ -174,8 +174,8 @@ export const height = Cached(
 );
 
 export const BoxComponent = Component(
-  useDOMEventListeners,
-  useStyle,
+  withDOMEventListeners,
+  withStyle,
   {
     create,
     mount,
@@ -248,6 +248,8 @@ export function render() {
     width: `${width}px`,
     height: `${height}px`,
     transition: `all ease-in-out ${transitionTime || 200}ms`,
+    "will-change": "transform, opacity width, height",
+    contain: 'size layout style paint',
     ...style,
   };
 

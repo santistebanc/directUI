@@ -90,7 +90,7 @@ export function removeUndefinedPadding(arr) {
       return arr.slice(0, i + 1);
     }
   }
-  return arr;
+  return [];
 }
 
 export function assert(func) {
@@ -113,4 +113,8 @@ export function setHiddenProperty(obj, prop, value, desc = {}) {
 
 export function filter(obj, func) {
   return Object.fromEntries(Object.entries(obj).filter(([k, v]) => func(v)));
+}
+
+export function pipe(funcs) {
+  return (init) => funcs.reduce((x, func) => func(x), init);
 }

@@ -4,3 +4,4 @@ export const DEFAULT_FONT = {
   fontFamily: "Courier New",
   getWidth: (text, fontSize) => (text.length * (fontSize * 1229)) / 2048,
 };
+export const DEFAULT_TEXT_ALIGN = "left";

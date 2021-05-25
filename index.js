@@ -7,9 +7,15 @@ import { Component } from "./src/Components/Component";
 
 const font = Font("./src/fonts/OpenSans-Regular.ttf", "Open Sans");
 
+const store = Store({
+  page: 1,
+  screenWidth: window.innerWidth,
+  screenHeight: window.innerHeight,
+});
+
 const texto = State("iiii");
 
-// const title = (page) => Text("hello world " + page, { font: font() });
+const title = (page) => Text("hello world " + page, { font: font() });
 
 const content = () => Text("this is the content of the page", { font: font() });
 
@@ -54,11 +60,6 @@ const container = (page) =>
         ]
   );
 
-const store = Store({
-  page: 1,
-  screenWidth: window.innerWidth,
-  screenHeight: window.innerHeight,
-});
 
 const main = ({ page, screenHeight, screenWidth }) =>
   Box(
@@ -100,10 +101,19 @@ const app = mountToDOM(
 //           ]
 //         : [Text("nope")]
 //     ),
-//   { font: font() }
+//   { font }
 // );
 
-// const app = mountToDOM(() => Text("hello"));
+// const app = mountToDOM(() =>
+//   Box(
+//     [
+//       Text(
+//         "hello, this is a somewhat long text to test if the thing i just did is actually working or not"
+//       ),
+//     ],
+//     { width: 200 }
+//   )
+// );
 
 console.log(app);
 

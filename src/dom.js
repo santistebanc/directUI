@@ -135,8 +135,8 @@ export function padding(...args) {
   return Object.fromEntries(values.map((x, i) => [keys[i], parts[x]]));
 }
 
-export function Font(src, fontFamily) {
-  const font = State({ src, fontFamily, loading: true });
+export function Font(src, fontFamily, getWidth) {
+  const font = State({ src, fontFamily, loading: true, getWidth });
   opentype.load(src).then((res) =>
     font.set({
       loading: false,
@@ -148,10 +148,10 @@ export function Font(src, fontFamily) {
   return font;
 }
 
-export function useDOMEventListeners(atts) {
+export function withDOMEventListeners(atts) {
   return { on: parsePrefix(atts, "on") };
 }
 
-export function useStyle(atts) {
+export function withStyle(atts) {
   return { style: parsePrefix(atts, "style") };
 }

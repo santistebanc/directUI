@@ -4,10 +4,11 @@ import {
   DEFAULT_FONT,
   DEFAULT_FONT_SIZE,
   DEFAULT_LINE_HEIGHT,
+  DEFAULT_TEXT_ALIGN,
 } from "../constants";
 import { width as textWidth, height as textHeight } from "./Text";
 import { getStylesString, mapEntries } from "../utils";
-import { useDOMEventListeners, useStyle } from "../dom";
+import { withDOMEventListeners, withStyle } from "../dom";
 
 export const defaultProps = {
   name: "input",
@@ -20,6 +21,7 @@ export const defaultProps = {
   x: 0,
   y: 0,
   font: DEFAULT_FONT,
+  textAlign: DEFAULT_TEXT_ALIGN,
   paddingLeft: 0,
   paddingTop: 0,
   paddingRight: 0,
@@ -54,8 +56,8 @@ export const height = Cached(
 );
 
 export const InputComponent = Component(
-  useDOMEventListeners,
-  useStyle,
+  withDOMEventListeners,
+  withStyle,
   {
     create,
     mount,
@@ -118,6 +120,7 @@ export function render() {
     font,
     fontSize,
     lineHeight,
+    textAlign,
     style,
     transitionTime,
   } = this.comp;
@@ -131,6 +134,9 @@ export function render() {
     "font-family": font.fontFamily,
     "font-size": `${fontSize}px`,
     "line-height": `${lineHeight}px`,
+    "text-align": textAlign,
+    "will-change": "transform, opacity width, height",
+    contain: "size layout style paint",
     ...style,
   };
 

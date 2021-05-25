@@ -138,5 +138,7 @@ word-break: normal;
     font-weight:normal;
     text-decoration:none;
     list-style-type:disc;
+
+    contain: size layout style;
     }
 `;
